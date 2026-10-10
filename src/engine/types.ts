@@ -111,6 +111,66 @@ export interface EngineOptions {
   readonly overrides?: Readonly<Record<string, string>>;
 }
 
+/* ── Rhymes ─────────────────────────────────────────────── */
+
+/**
+ * perfect: identical from the last stressed vowel to the end ("flow"/"glow", feminine "reason"/"season").
+ * multi:   a perfect match that also continues backwards through earlier syllables
+ *          ("bad habit"/"mad rabbit" = 3 syllables). `syllables` reports how many.
+ * slant:   same vowels, consonants only loosely alike ("fame"/"rain"), within `slantTolerance`.
+ */
+export type RhymeKind = 'perfect' | 'multi' | 'slant';
+
+/** One syllable of a line: word index within the line, syllable index within that word. */
+export interface SyllableRef {
+  readonly word: number;
+  readonly syllable: number;
+}
+
+export interface RhymeMember {
+  readonly line: number;
+  /** First and last matched syllable (inclusive). Can sit in different words ("stranger us"). */
+  readonly start: SyllableRef;
+  readonly end: SyllableRef;
+  /** The words the range touches, as typed, space separated. */
+  readonly text: string;
+  /** 'end' when the member finishes the line, otherwise 'internal'. */
+  readonly position: 'end' | 'internal';
+  /** True if any word in the range has an approximate pronunciation. */
+  readonly approximate: boolean;
+}
+
+export interface RhymeChain {
+  /** Derived from the rhyme sound ("ow", "ey-n-jh-er-ah-s", "ay~" for slant), numbered "-2" on a collision. Same input, same IDs. */
+  readonly id: string;
+  /** The weakest link in the chain: multi > perfect > slant. */
+  readonly kind: RhymeKind;
+  /** Syllables matched by every member (the smallest link in the chain). */
+  readonly syllables: number;
+  /** ARPAbet (no stress) of the longest member tail; slant chains list the vowels only. */
+  readonly sound: string;
+  /** Reading order. */
+  readonly members: readonly RhymeMember[];
+  readonly approximate: boolean;
+  /** Worst consonant distance among slant links (0..1); 0 for exact chains. */
+  readonly slantCost: number;
+}
+
+export interface RhymeOptions {
+  /** Which kinds to report. Default all three. Without 'multi', multi matches are reported as perfect on the stressed tail. */
+  readonly modes?: readonly RhymeKind[];
+  /** 0..1, how different the consonants may be. 0 turns slant off; ~0.2 allows m/n; default 0.3. */
+  readonly slantTolerance?: number;
+  /** Rhymes inside a line. Default true. */
+  readonly internalRhymes?: boolean;
+  /** 'line': an internal word only rhymes with words of its own line. 'verse': with any line. Default 'line'. */
+  readonly internalScope?: 'line' | 'verse';
+  /** Function words that never count as internal rhymes. Defaults to a short list (i, my, the, you, ...). */
+  readonly internalStopWords?: readonly string[];
+  /** Let identical words form chains ("flow" ... "flow"). Default false. */
+  readonly allowRepeats?: boolean;
+}
+
 export interface Engine {
   /** Verse text to lines and words. Pure, needs no dictionary. */
   tokenize(text: string): Verse;
@@ -120,22 +180,6 @@ export interface Engine {
   pronounce(word: string): Pronunciation;
   /** tokenize + pronounce every word. */
   analyze(text: string): AnalyzedVerse;
+  /** analyze + detectRhymes. */
+  rhymes(text: string, options?: RhymeOptions): RhymeChain[];
 }
-
-/* ── Public functions (src/engine/index.ts) ─────────────── */
-
-/*
- * export function createEngine(dict: CmuDict, options?: EngineOptions): Engine;
- *   Sync and pure: inject a dictionary. Tests pass a tiny fixture.
- *
- * export function loadEngine(options?: EngineOptions): Promise<Engine>;
- *   Dynamically imports ./data/cmudict.json (code-split by Vite) and calls createEngine.
- *
- * export function tokenizeVerse(text: string): Verse;
- * export function normalizeWord(raw: string): string;
- *
- * export function parseArpabet(s: string): Phone[];        // "HH AH0 L OW1"
- * export function formatArpabet(phones: readonly Phone[]): string;
- * export function syllabify(phones: readonly Phone[], spelling?: string): Syllable[];
- * export function guessPronunciation(word: string): Pronunciation;   // letter-to-sound only
- */

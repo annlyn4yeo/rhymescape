@@ -1,6 +1,0 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    { "name": "style-tile", "runtimeExecutable": "node", "runtimeArgs": ["scripts/serve.mjs"], "port": 4173 }
-  ]
-}

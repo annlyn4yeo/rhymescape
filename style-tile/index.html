@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en" data-theme="paper">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhymescape Style Tile</title>
+  <meta name="description" content="Riso Proof Sheet: the visual direction for Rhymescape. Type specimen, palette, rhyme-chain colour engine and a sample verse on the beat grid.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='oklch(0.21 0.035 262)'/%3E%3Cpath d='M5 24C5 8 15 8 15 24' fill='none' stroke='oklch(0.7 0.21 354)' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M13 24C13 3 28 3 28 24' fill='none' stroke='oklch(0.93 0.17 102)' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/bricolage-grotesque-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/martian-mono-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <script>document.documentElement.classList.add('js')</script>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="tile.css">
+  <script src="chains.js" defer></script>
+  <script src="verse.js" defer></script>
+  <script src="tile.js" defer></script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="dock-wrap">
+    <nav class="dock" aria-label="Style tile">
+      <a class="dock-brand" href="#top" aria-label="Rhymescape, top of page">
+        <svg viewBox="0 0 28 20" width="28" height="20" aria-hidden="true"><path class="dock-arc a" d="M2 17C2 4 12 4 12 17"/><path class="dock-arc b" d="M10 17C10 -1 26 -1 26 17"/></svg>
+        <span>Rhymescape</span>
+      </a>
+      <div class="seg" role="group" aria-label="Stock">
+        <button type="button" class="seg-btn" data-theme-set="paper" aria-pressed="true">Paper</button>
+        <button type="button" class="seg-btn" data-theme-set="dark" aria-pressed="false">Black stock</button>
+      </div>
+      <span class="status" id="font-status" role="status"><i></i><span>Loading fonts</span></span>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- ───────────── Hero ───────────── -->
+    <section class="hero shell" data-reveal>
+      <div class="hero-copy">
+        <p class="eyebrow">Style tile 01 · Riso Proof Sheet</p>
+        <h1 class="mega" aria-label="Rhymescape"><span class="mega-a" aria-hidden="true">Rhyme</span><span class="mega-b" aria-hidden="true">scape</span></h1>
+        <p class="lede">Write bars. Watch every rhyme light up.</p>
+        <p class="concept">Rhymescape is printed like a risograph zine: warm stock, blue-black ink, and loud fluorescent passes that overprint wherever words rhyme. Every syllable sits on a 16-slot beat grid and every rhyme chain gets its own ink, marker and line style, so flow is something you can see as well as hear.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#verse"><span>See the verse</span><span class="btn-orb"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4.5h7.5V12M11.5 4.5 4 12"/></svg></span></a>
+          <a class="btn btn-ghost" href="#chains"><span>Chain colours</span><span class="btn-orb"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.5v9M3.5 8.5 8 13l4.5-4.5"/></svg></span></a>
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <span class="blob blob-pink halftone"></span>
+        <span class="blob blob-blue"></span>
+        <span class="blob blob-yellow"></span>
+        <svg class="hero-arcs" viewBox="0 0 420 300" preserveAspectRatio="xMidYMid meet">
+          <path class="ha ha-0" d="M40 232C40 70 150 70 150 232"/>
+          <path class="ha ha-1" d="M130 232C130 20 300 20 300 232"/>
+          <path class="ha ha-2" d="M240 232C240 112 330 112 330 232"/>
+          <g class="hero-grid"><path d="M20 244H410"/><path d="M20 244v14M125 244v14M230 244v14M335 244v14M410 244v14"/></g>
+        </svg>
+        <span class="sticker s-bpm">90 BPM</span>
+        <span class="sticker s-sig">4/4</span>
+        <span class="sticker s-bar">bar 01 ↘</span>
+        <span class="tape"></span>
+      </div>
+    </section>
+
+    <!-- ───────────── 01 Type ───────────── -->
+    <section class="band shell" id="type" aria-labelledby="type-h">
+      <header class="band-head" data-reveal>
+        <p class="eyebrow">01 · Type</p>
+        <h2 id="type-h">Two voices: one shouts, one counts.</h2>
+        <p>Bricolage Grotesque is the loud, bendy headline voice. Martian Mono is the counting voice: wide, even cells that make every syllable land on its slot.</p>
+      </header>
+
+      <div class="type-grid">
+        <article class="plate plate-pink" data-reveal>
+          <div class="plate-core">
+            <p class="label">Display + UI · Bricolage Grotesque</p>
+            <div class="aa" aria-hidden="true">Aa</div>
+            <p class="weights" aria-label="Weight and width ladder">
+              <span style="--w:200;--s:100">Flow</span>
+              <span style="--w:400;--s:100">Flow</span>
+              <span style="--w:600;--s:88">Flow</span>
+              <span style="--w:800;--s:75">Flow</span>
+            </p>
+            <p class="pangram">Quick bars jump over the lazy beat, vexing five dozen MCs.</p>
+            <p class="why"><b>Why:</b> a quirky grotesque with real width (75–100) and optical-size axes. Stacked at 800 and condensed it prints like a zine cover; at 400 it stays calm enough for controls. One family, so the UI never needs a second sans.</p>
+          </div>
+        </article>
+
+        <article class="plate plate-blue" data-reveal>
+          <div class="plate-core">
+            <p class="label">Verse + data · Martian Mono</p>
+            <div class="ruler" aria-hidden="true">
+              <span class="ruler-row"><i>i</i><i>i</i><i>i</i><i>i</i><i>i</i><i>i</i></span>
+              <span class="ruler-row"><i>W</i><i>W</i><i>W</i><i>W</i><i>W</i><i>W</i></span>
+              <span class="ruler-row"><i>m</i><i>.</i><i>l</i><i>1</i><i>0</i><i>–</i></span>
+            </div>
+            <p class="mono-line">Every glyph is one cell wide. <span class="nums">0123456789</span></p>
+            <p class="why"><b>Why:</b> a true monospace, so syllables snap to the 16-slot grid and arcs can be measured, not guessed. Its width axis (75–112%) lets the grid breathe on big screens or tighten on small ones without ever leaving the grid. Weight 450 for unstressed syllables, 740 for stressed.</p>
+          </div>
+        </article>
+
+        <article class="plate plate-mint scale-plate" data-reveal>
+          <div class="plate-core">
+            <p class="label">Scale</p>
+            <ul class="scale">
+              <li style="--fs: var(--t-h1)"><span class="scale-sample d">Bars</span><code>--t-h1 · display 800 · wdth 75</code></li>
+              <li style="--fs: var(--t-h2)"><span class="scale-sample d">Syllable grid</span><code>--t-h2 · display 700</code></li>
+              <li style="--fs: var(--t-h3)"><span class="scale-sample d">Chain legend heading</span><code>--t-h3 · display 600</code></li>
+              <li style="--fs: var(--t-body)"><span class="scale-sample">Body copy sits calm at 17px on a 1.55 line.</span><code>--t-body · display 400</code></li>
+              <li style="--fs: var(--t-verse)"><span class="scale-sample m">Slow the flow, let the beat</span><code>--t-verse · mono 450/740</code></li>
+              <li style="--fs: var(--t-micro)"><span class="scale-sample label-sample">Eyebrow · caption · count</span><code>--t-micro · mono 600 · caps · +0.16em</code></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────────── 02 Palette ───────────── -->
+    <section class="band shell" id="palette" aria-labelledby="palette-h">
+      <header class="band-head" data-reveal>
+        <p class="eyebrow">02 · Palette</p>
+        <h2 id="palette-h">Stock, ink, and five fluorescent passes.</h2>
+        <p>Surfaces are warm paper or black card. Text is blue-black ink, never pure black. Fluorescent inks are decoration and fills; text on them is always blue-black ink. Everything is OKLCH, so lightness is honest across hues.</p>
+      </header>
+
+      <div class="palette-grid">
+        <article class="plate plate-yellow" data-reveal>
+          <div class="plate-core">
+            <p class="label">Stock + ink</p>
+            <ul class="swatches" data-swatches>
+              <li style="--sw: var(--paper)" data-token="--paper"><span class="chip"></span><b>Paper</b><code>--paper</code><em class="val"></em></li>
+              <li style="--sw: var(--paper-raised)" data-token="--paper-raised"><span class="chip"></span><b>Raised sheet</b><code>--paper-raised</code><em class="val"></em></li>
+              <li style="--sw: var(--paper-sunk)" data-token="--paper-sunk"><span class="chip"></span><b>Sunk tray</b><code>--paper-sunk</code><em class="val"></em></li>
+              <li style="--sw: var(--ink)" data-token="--ink"><span class="chip"></span><b>Ink</b><code>--ink</code><em class="val"></em></li>
+              <li style="--sw: var(--ink-soft)" data-token="--ink-soft"><span class="chip"></span><b>Soft ink</b><code>--ink-soft</code><em class="val"></em></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="plate plate-orange" data-reveal>
+          <div class="plate-core">
+            <p class="label">Fluorescent inks · the same on both stocks</p>
+            <ul class="inks" data-swatches>
+              <li style="--sw: var(--fl-pink)" data-token="--fl-pink"><span class="ink-chip"><b>Hot pink</b><small data-on></small></span><code>--fl-pink</code><em class="val"></em></li>
+              <li style="--sw: var(--fl-orange)" data-token="--fl-orange"><span class="ink-chip"><b>Orange</b><small data-on></small></span><code>--fl-orange</code><em class="val"></em></li>
+              <li style="--sw: var(--fl-yellow)" data-token="--fl-yellow"><span class="ink-chip"><b>Yellow</b><small data-on></small></span><code>--fl-yellow</code><em class="val"></em></li>
+              <li style="--sw: var(--fl-mint)" data-token="--fl-mint"><span class="ink-chip"><b>Mint</b><small data-on></small></span><code>--fl-mint</code><em class="val"></em></li>
+              <li style="--sw: var(--fl-blue)" data-token="--fl-blue"><span class="ink-chip"><b>Blue</b><small data-on></small></span><code>--fl-blue</code><em class="val"></em></li>
+            </ul>
+            <div class="overprint" aria-hidden="true"><i class="op op-1"></i><i class="op op-2"></i><i class="op op-3"></i></div>
+            <p class="why"><b>Overprint:</b> where two inks overlap they multiply into a third colour. Used for stickers and for the highlighter wash when two chains meet.</p>
+          </div>
+        </article>
+
+        <article class="plate plate-blue contrast-plate" data-reveal>
+          <div class="plate-core">
+            <p class="label">Contrast report · measured live from the tokens above</p>
+            <ul class="contrast" id="contrast-report" aria-label="Contrast ratios"></ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ───────────── 03 Chains ───────────── -->
+    <section class="band shell" id="chains" aria-labelledby="chains-h">
+      <header class="band-head" data-reveal>
+        <p class="eyebrow">03 · Rhyme chains</p>
+        <h2 id="chains-h">Any number of chains. Never just a colour.</h2>
+        <p>Chains are generated, not listed. Hue steps by the golden angle so neighbours never clash; lightness is then solved per chain until it clears 4.5:1 on the hardest stock. Shape, line style and a letter carry the same information, so colour is never the only signal.</p>
+      </header>
+
+      <div class="chains-layout">
+        <article class="plate plate-mint chains-controls" data-reveal>
+          <div class="plate-core">
+            <label class="label" for="chain-count">How many chains?</label>
+            <div class="count-row">
+              <output id="chain-count-out" for="chain-count">8</output>
+              <input id="chain-count" type="range" min="1" max="26" value="8" step="1">
+            </div>
+            <ol class="recipe">
+              <li><b>Hue</b> <span>(354° + n × 137.508°) mod 360. Golden angle: every new chain lands in the biggest gap.</span></li>
+              <li><b>Value</b> <span>Step lightness away from the stock until contrast ≥ 4.7 against paper, raised and sunk. Chroma follows the sRGB gamut edge.</span></li>
+              <li><b>Wash</b> <span>A highlighter fill, solved so body ink on it also clears 4.7:1.</span></li>
+              <li><b>Signal</b> <span>8 marker shapes × 5 line styles × a unique letter. Combinations stay unique for 40 chains, letters forever.</span></li>
+            </ol>
+          </div>
+        </article>
+
+        <ul class="chain-list" id="chain-list" aria-label="Generated chains"></ul>
+      </div>
+    </section>
+
+    <!-- ───────────── 04 Verse ───────────── -->
+    <section class="band shell" id="verse" aria-labelledby="verse-h">
+      <header class="band-head" data-reveal>
+        <p class="eyebrow">04 · Sample verse</p>
+        <h2 id="verse-h">Sixteen slots to a bar. Arcs join the rhymes.</h2>
+        <p>Mock data on the real grid: syllables sit in fixed cells, stressed syllables are heavier, chains are highlighted and joined by arcs. Hover a legend chip to isolate a chain.</p>
+      </header>
+
+      <article class="plate plate-pink verse-plate" data-reveal>
+        <div class="plate-core">
+          <div class="verse-top">
+            <div class="verse-title">
+              <p class="label">Verse 1 · 90 BPM · 4/4 · 16 slots per bar</p>
+              <h3>Arc in the Dark</h3>
+            </div>
+            <button type="button" class="btn btn-small" id="verse-replay"><span>Replay arcs</span><span class="btn-orb"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3.5 8a4.5 4.5 0 1 0 1.4-3.3M3.5 3v2.4h2.4"/></svg></span></button>
+          </div>
+          <ul class="legend" id="verse-legend" aria-label="Rhyme chains in this verse"></ul>
+          <div class="verse-scroller" tabindex="0" role="region" aria-label="Verse on the beat grid, scrolls sideways on small screens">
+            <div class="verse-stage" id="verse-stage"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ───────────── 05 System ───────────── -->
+    <section class="band shell" id="system" aria-labelledby="system-h">
+      <header class="band-head" data-reveal>
+        <p class="eyebrow">05 · System</p>
+        <h2 id="system-h">Space, shape, motion.</h2>
+      </header>
+
+      <div class="system-grid">
+        <article class="plate plate-yellow" data-reveal>
+          <div class="plate-core">
+            <p class="label">Spacing · 4px unit</p>
+            <ul class="space">
+              <li style="--w: var(--s-1)"><code>--s-1</code><i></i><span>4</span></li>
+              <li style="--w: var(--s-2)"><code>--s-2</code><i></i><span>8</span></li>
+              <li style="--w: var(--s-3)"><code>--s-3</code><i></i><span>12</span></li>
+              <li style="--w: var(--s-4)"><code>--s-4</code><i></i><span>16</span></li>
+              <li style="--w: var(--s-5)"><code>--s-5</code><i></i><span>24</span></li>
+              <li style="--w: var(--s-6)"><code>--s-6</code><i></i><span>32</span></li>
+              <li style="--w: var(--s-7)"><code>--s-7</code><i></i><span>48</span></li>
+              <li style="--w: var(--s-8)"><code>--s-8</code><i></i><span>64</span></li>
+              <li style="--w: var(--s-9)"><code>--s-9</code><i></i><span>96</span></li>
+              <li style="--w: var(--s-10)"><code>--s-10</code><i></i><span>144</span></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="plate plate-orange" data-reveal>
+          <div class="plate-core">
+            <p class="label">Shape · double bezel</p>
+            <div class="bezel-demo" aria-hidden="true">
+              <div class="bz-outer"><div class="bz-inner"><span>inner = outer − bezel</span></div></div>
+            </div>
+            <p class="why">Every plate is a tray holding a sheet: 28px outer, 6px bezel, 22px inner, so the curves stay concentric. Offsets are hard, coloured "misregistration" shadows, never soft black blurs. Pills (999px) for buttons and chips.</p>
+            <dl class="specs">
+              <div><dt>--r-outer</dt><dd>28px</dd></div>
+              <div><dt>--bezel</dt><dd>6px</dd></div>
+              <div><dt>--r-inner</dt><dd>22px</dd></div>
+              <div><dt>--stroke</dt><dd>2px ink</dd></div>
+            </dl>
+          </div>
+        </article>
+
+        <article class="plate plate-mint motion-plate" data-reveal>
+          <div class="plate-core">
+            <p class="label">Motion · press a row to play</p>
+            <ul class="motion">
+              <li><button type="button" class="demo" style="--dur: var(--dur-press); --ease: var(--ease-out)"><span class="m-name">Press</span><code>140ms · ease-out</code><span class="track"><i class="dot"></i></span></button></li>
+              <li><button type="button" class="demo" style="--dur: var(--dur-base); --ease: var(--ease-out)"><span class="m-name">Hover, tooltip</span><code>240ms · ease-out</code><span class="track"><i class="dot"></i></span></button></li>
+              <li><button type="button" class="demo" style="--dur: var(--dur-slow); --ease: var(--ease-in-out)"><span class="m-name">Things that move</span><code>480ms · ease-in-out</code><span class="track"><i class="dot"></i></span></button></li>
+              <li><button type="button" class="demo" style="--dur: var(--dur-reveal); --ease: var(--ease-drawer)"><span class="m-name">Page reveal, arcs</span><code>800ms · drawer</code><span class="track"><i class="dot"></i></span></button></li>
+              <li><button type="button" class="demo" style="--dur: var(--dur-slow); --ease: var(--ease-slap)"><span class="m-name">Sticker slap</span><code>480ms · one overshoot</code><span class="track"><i class="dot"></i></span></button></li>
+            </ul>
+            <p class="why">Never animate things used hundreds of times a day, like keyboard moves between syllables. Under <code>prefers-reduced-motion</code> travel and blur drop to zero; fades stay.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot shell">
+    <p>Source of truth: <code>DESIGN.md</code> · tokens in <code>style-tile/tokens.css</code> · fonts self-hosted from Fontsource.</p>
+  </footer>
+</body>
+</html>

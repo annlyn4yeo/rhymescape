@@ -37,6 +37,9 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+/** A single slanted syllable: real, but the faintest thing the engine reports. It stays quiet until its chain is focused. */
+export const isLoose = (chain: RhymeChain): boolean => chain.kind === 'slant' && chain.syllables < 2;
+
 export function describeChain(chain: RhymeChain): string {
   return `${chain.kind} rhyme, ${plural(chain.syllables, 'syllable')}${chain.approximate ? ', approximate' : ''}`;
 }
@@ -84,6 +87,7 @@ function renderLine(line: AnalyzedLine, placed: readonly Placed[], chains: reado
       mark.dataset.chain = chain.id;
       mark.dataset.member = `${cell.chain}:${cell.member}`;
       mark.dataset.line = color.lineStyle;
+      mark.dataset.tier = isLoose(chain) ? 'loose' : 'firm';
       mark.title = `${color.label}: ${describeChain(chain)}`;
       mark.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
       mark.style.setProperty('--chain-wash', `var(--chain-${color.index}-wash)`);
@@ -92,6 +96,7 @@ function renderLine(line: AnalyzedLine, placed: readonly Placed[], chains: reado
         const tag = el('sup', 'tag', color.label + (chain.members[cell.member]!.approximate ? '≈' : ''));
         tag.dataset.chain = chain.id;
         tag.dataset.member = `${cell.chain}:${cell.member}`;
+        tag.dataset.tier = isLoose(chain) ? 'loose' : 'firm';
         tag.setAttribute('aria-label', `Chain ${color.label}, ${describeChain(chain)}`);
         tag.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
         body.append(tag);
@@ -129,7 +134,15 @@ export function renderReadView(container: HTMLElement, verse: AnalyzedVerse, cha
   container.replaceChildren(next);
 }
 
-/** Focus one chain: every other highlight, tag, arc and rail chip dims. Pass null to clear. */
-export function soloChain(scope: ParentNode, id: string | null): void {
-  scope.querySelectorAll<HTMLElement>('[data-chain]').forEach((node) => node.classList.toggle('is-dim', id !== null && node.dataset.chain !== id));
+/**
+ * Focus one chain. Its words, tags, arcs and markers light up (.is-on: arcs and markers only exist while lit) and
+ * everything else dims. Pass null to clear. The scope carries data-focus so CSS can tell "resting" from "focused".
+ */
+export function soloChain(scope: HTMLElement, id: string | null): void {
+  scope.toggleAttribute('data-focus', id !== null);
+  scope.querySelectorAll<HTMLElement | SVGElement>('[data-chain]').forEach((node) => {
+    const on = id !== null && node.dataset.chain === id;
+    node.classList.toggle('is-on', on);
+    node.classList.toggle('is-dim', id !== null && !on);
+  });
 }

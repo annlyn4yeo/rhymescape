@@ -49,10 +49,14 @@
           <div class="plate-head">
             <p class="label" id="read-h">Read view</p>
             <span class="meta" id="read-meta"></span>
+            <button class="toggle" id="loose-toggle" type="button" aria-pressed="true" hidden>
+              <span class="toggle-dot" aria-hidden="true"></span>Loose rhymes <b id="loose-count">0</b>
+            </button>
           </div>
 
           <div class="rail-wrap" id="rail-wrap" hidden>
             <ul class="rail" id="chain-rail" aria-label="Rhyme chains"></ul>
+            <p class="detail" id="chain-detail" data-state="idle" aria-live="polite"></p>
           </div>
 
           <div class="read-scroll" id="read-scroll">
@@ -67,7 +71,6 @@
             </div>
           </div>
 
-          <p class="foot-note" id="read-foot" hidden>Hover a word or a chain to isolate it. Click a chain to pin it.</p>
         </div>
       </section>
     </main>

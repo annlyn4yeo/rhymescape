@@ -136,6 +136,8 @@ export interface RhymeMember {
   readonly text: string;
   /** 'end' when the member finishes the line, otherwise 'internal'. */
   readonly position: 'end' | 'internal';
+  /** True for a mid-word rhyme: the matched syllables stop before the end of their last word ("chop" in "chopper"). */
+  readonly partial: boolean;
   /** True if any word in the range has an approximate pronunciation. */
   readonly approximate: boolean;
 }
@@ -163,8 +165,15 @@ export interface RhymeOptions {
   readonly slantTolerance?: number;
   /** Rhymes inside a line. Default true. */
   readonly internalRhymes?: boolean;
-  /** 'line': an internal word only rhymes with words of its own line. 'verse': with any line. Default 'line'. */
-  readonly internalScope?: 'line' | 'verse';
+  /**
+   * 'line': an internal word only rhymes with words of its own line. 'nearby': also with lines within
+   * `internalWindow` of it (a one-syllable slant needs the same line). 'verse': with any line. Default 'nearby'.
+   */
+  readonly internalScope?: 'line' | 'nearby' | 'verse';
+  /** Lines either side that count as nearby. Default 2. */
+  readonly internalWindow?: number;
+  /** Rhymes that stop inside a word ("chop" in "chopper" with "stop"). Default true; needs `internalRhymes`. */
+  readonly midWord?: boolean;
   /** Function words that never count as internal rhymes. Defaults to a short list (i, my, the, you, ...). */
   readonly internalStopWords?: readonly string[];
   /** Let identical words form chains ("flow" ... "flow"). Default false. */

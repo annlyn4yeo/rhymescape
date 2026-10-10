@@ -1,6 +1,6 @@
 import type { RhymeChain } from '../engine';
 import type { ChainColor } from './colors';
-import { describeChain } from './readView';
+import { describeChain, isLoose } from './readView';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -30,8 +30,9 @@ export interface RailHandlers {
 }
 
 /**
- * The chain rail: one chip per chain with its marker, letter, rhyme sound and syllable count.
+ * The chain rail: one compact pill per chain with its marker, letter, rhyme sound and syllable count.
  * It sits above the verse, so chains are always on screen. Hover or focus isolates a chain; click pins it.
+ * The pill stays small on purpose: the kind and the members show in the detail line (renderDetail) when focused.
  */
 export function renderRail(rail: HTMLElement, chains: readonly RhymeChain[], colors: readonly ChainColor[], { onHover, onPin }: RailHandlers): void {
   rail.textContent = '';
@@ -44,17 +45,17 @@ export function renderRail(rail: HTMLElement, chains: readonly RhymeChain[], col
     const chip = el('button', 'rail-chip');
     chip.type = 'button';
     chip.dataset.chain = chain.id;
+    chip.dataset.tier = isLoose(chain) ? 'loose' : 'firm';
     chip.setAttribute('aria-pressed', 'false');
     chip.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
     chip.style.setProperty('--i', String(Math.min(i, 10)));
 
-    const top = el('span', 'chip-top');
-    top.append(markerIcon(color), el('span', 'tag', color.label), el('span', 'sound', chain.sound + (chain.kind === 'slant' ? '~' : '')));
-
-    const bottom = el('span', 'chip-bottom');
-    bottom.append(el('b', undefined, String(chain.syllables)), el('span', 'unit', chain.syllables === 1 ? 'syl' : 'syls'), el('span', 'kind', chain.kind + (chain.approximate ? ' ≈' : '')));
-
-    chip.append(top, bottom);
+    chip.append(
+      markerIcon(color),
+      el('span', 'tag', color.label),
+      el('span', 'sound', chain.sound + (chain.kind === 'slant' ? '~' : '')),
+      el('b', 'count', String(chain.syllables)),
+    );
     chip.title = chain.members.map((m) => m.text).join(' · ');
     chip.setAttribute('aria-label', `Chain ${color.label}: ${describeChain(chain)}, ${plural(chain.members.length, 'member')}: ${chain.members.map((m) => m.text).join(', ')}. Press to pin.`);
 
@@ -86,4 +87,21 @@ export function markActiveChip(rail: HTMLElement, id: string | null, smooth: boo
     const by = c.left < r.left + edge ? c.left - r.left - edge : c.right > r.right - edge ? c.right - r.right + edge : 0;
     if (by) rail.scrollBy({ left: by, behavior: smooth ? 'smooth' : 'auto' });
   });
+}
+
+/** The line under the rail: what the focused chain is, or a hint when nothing is. Its height never changes, so the verse below stays put. */
+export function renderDetail(node: HTMLElement, chain: RhymeChain | null, color: ChainColor | null): void {
+  if (!chain || !color) {
+    node.dataset.state = 'idle';
+    node.textContent = 'Hover a word or a chain to light it up. Click a chain to pin it.';
+    return;
+  }
+  node.dataset.state = 'focus';
+  node.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
+  const kind = chain.kind + (chain.approximate ? ' (approximate)' : '');
+  node.replaceChildren(
+    el('b', 'tag', color.label),
+    el('span', 'detail-kind', `${kind}, ${plural(chain.syllables, 'syllable')}`),
+    el('span', 'detail-members', chain.members.map((m) => m.text).join('  /  ')),
+  );
 }

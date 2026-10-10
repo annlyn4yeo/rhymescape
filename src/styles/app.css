@@ -187,12 +187,12 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
 .rail-chip {
   flex: none;
   scroll-snap-align: start;
-  display: grid;
-  gap: 3px;
-  min-width: 128px;
-  padding: 9px 13px 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
   border: var(--stroke) solid var(--ink);
-  border-radius: 16px;
+  border-radius: var(--r-chip);
   background: var(--paper);
   color: var(--ink);
   text-align: left;
@@ -203,18 +203,30 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
 }
 @keyframes chip-in { from { opacity: 0; transform: translateY(calc(var(--travel-reveal) * 0.3)); } }
 .rail-chip:active { transform: scale(var(--press-scale)); }
+/* Loose chains sit back: a dashed outline and soft ink. They wake up when focused, like everything else. */
+.rail-chip[data-tier='loose'] { border-style: dashed; border-color: var(--line-strong); color: var(--ink-soft); }
 /* The focused chain lifts on a hard shadow in its own ink; a pinned one also sinks into the tray. */
-.rail-chip[data-active] { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--chain-ink); }
+.rail-chip[data-active] { transform: translate(-1px, -1px); border-style: solid; border-color: var(--ink); color: var(--ink); box-shadow: 3px 3px 0 var(--chain-ink); }
 .rail-chip[aria-pressed='true'] { background: var(--paper-sunk); }
-.chip-top { display: flex; align-items: center; gap: 7px; }
-.chip-top .tag { margin: 0; vertical-align: baseline; }
-.marker { width: 18px; height: 18px; flex: none; overflow: visible; }
+.rail-chip .tag { margin: 0; vertical-align: baseline; }
+.marker { width: 16px; height: 16px; flex: none; overflow: visible; }
 .marker path { fill: var(--chain-ink); stroke: var(--paper); stroke-width: 1.2; paint-order: stroke; }
 .sound { font: 700 0.75rem/1 var(--font-mono); letter-spacing: 0.02em; max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chip-bottom { display: flex; align-items: baseline; gap: 6px; }
-.chip-bottom b { font: 800 1.7rem/1 var(--font-display); font-stretch: 75%; letter-spacing: -0.03em; font-feature-settings: 'tnum'; }
-.unit { font: 600 var(--t-micro)/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-.kind { margin-left: auto; font: 600 var(--t-micro)/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+.count { font: 800 0.8rem/1 var(--font-mono); font-feature-settings: 'tnum'; padding-left: 7px; border-left: var(--stroke) solid var(--line-strong); }
+
+/* One line of detail under the rail. Its height is fixed, so focusing a chain never moves the verse. */
+.detail { display: flex; align-items: center; gap: var(--s-3); height: 26px; margin: 0 var(--s-5); overflow: hidden; white-space: nowrap; font: 500 var(--t-micro)/1.3 var(--font-mono); letter-spacing: 0.03em; color: var(--ink-soft); }
+.detail .tag { margin: 0; vertical-align: baseline; flex: none; }
+.detail-kind { flex: none; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+.detail-members { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--t-small); letter-spacing: 0; }
+
+/* Loose-rhymes switch in the plate head. */
+.toggle { display: inline-flex; align-items: center; gap: 7px; margin-left: var(--s-3); padding: 4px 11px 4px 9px; border: var(--stroke) solid var(--ink); border-radius: var(--r-chip); background: var(--paper); color: var(--ink); font: 600 var(--t-micro)/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
+.toggle:active { transform: scale(var(--press-scale)); }
+.toggle b { font-weight: 800; font-feature-settings: 'tnum'; color: var(--ink-soft); }
+.toggle-dot { width: 10px; height: 10px; border: var(--stroke) solid var(--ink); border-radius: 50%; transition: background-color var(--dur-fast) var(--ease-out); }
+.toggle[aria-pressed='true'] .toggle-dot { background: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .toggle:hover { background: var(--paper-sunk); } }
 
 /* Verse: scrolls inside the plate, with soft edges instead of hard dividers. */
 .read-scroll {
@@ -249,8 +261,10 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
   text-underline-offset: 0.32em;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  transition: opacity var(--dur-fast) var(--ease-out);
+  transition: opacity var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
+/* A loose rhyme is underline only until its chain is focused. */
+.hl[data-tier='loose']:not(.is-on) { background-color: transparent; }
 .hl[data-line='solid'] { text-decoration-style: solid; }
 .hl[data-line='dashed'] { text-decoration-style: dashed; }
 .hl[data-line='dotted'] { text-decoration-style: dotted; text-decoration-thickness: 3px; }
@@ -271,22 +285,35 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
   vertical-align: super;
   transition: opacity var(--dur-fast) var(--ease-out);
 }
+/* A loose tag keeps a sliver of room so nothing shifts when it appears, but shows only its letter, and only when lit. */
+.tag[data-tier='loose'] { min-width: 0; width: 0.9em; margin-left: 0.15em; padding-inline: 0; background: transparent; color: var(--chain-ink); }
+.tag[data-tier='loose']:not(.is-on) { opacity: 0; }
 .is-dim { opacity: 0.16; }
 
 .empty { display: grid; gap: var(--s-2); padding: var(--s-6) var(--s-5); border: var(--stroke) dashed var(--line-strong); border-radius: 14px; font-family: var(--font-display); }
 .empty p:first-child { font-size: var(--t-h3); font-weight: 650; font-stretch: 88%; line-height: 1.2; max-width: 30ch; }
 .empty-sub { color: var(--ink-soft); font-size: var(--t-small); }
 
-/* Arcs: SVG overlay, positioned from the rendered words */
+/* Arcs: SVG overlay, positioned from the rendered words. They exist only for the focused chain: each one
+   rises from its baseline (gutter arcs grow outward) and its markers settle in; leaving is faster than arriving. */
 .arcs { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .arc path { fill: none; stroke: var(--chain-ink); stroke-linejoin: round; }
 .arc .hit { stroke: oklch(0 0 0 / 0); stroke-width: 16; pointer-events: stroke; }
-.arc-marker path { fill: var(--chain-ink); stroke: var(--paper-raised); stroke-width: 1.4; paint-order: stroke; }
-/* The fade only runs once GSAP is done, so the two never fight over opacity. */
-.arcs.is-settled .arc, .arcs.is-settled .arc-marker { transition: opacity var(--dur-fast) var(--ease-out); }
-
-/* Footer: one quiet hint line */
-.foot-note { flex: none; padding-top: var(--s-1); color: var(--ink-soft); font-size: var(--t-micro); letter-spacing: 0.04em; }
+.arcs .arc:not(.is-on) .hit { pointer-events: none; }
+.arcs .arc {
+  opacity: 0;
+  transform: scaleY(0.55);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: opacity var(--dur-press) var(--ease-out), transform var(--dur-press) var(--ease-out);
+}
+.arcs .arc[data-rise='out'] { transform: scaleX(0.55); transform-origin: 0% 50%; }
+.arcs .arc.is-on { opacity: 1; transform: none; transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-drawer); }
+/* Markers are positioned by a transform attribute on the group, so only the shape inside moves. */
+.arc-marker { opacity: 0; transition: opacity var(--dur-press) var(--ease-out); }
+.arc-marker.is-on { opacity: 1; transition: opacity var(--dur-fast) var(--ease-out) 60ms; }
+.arc-marker path { fill: var(--chain-ink); stroke: var(--paper-raised); stroke-width: 1.4; paint-order: stroke; transform: scale(0.4); transform-box: fill-box; transform-origin: center; transition: transform var(--dur-press) var(--ease-out); }
+.arc-marker.is-on path { transform: none; transition: transform var(--dur-base) var(--ease-out) 60ms; }
 
 /* ── Smaller screens: stacked, the page scrolls only once there is a result ── */
 @media (max-width: 960px), (max-height: 560px) {
@@ -297,7 +324,7 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
   .workspace[data-empty] .read { display: none; }
   .read { scroll-margin-top: var(--s-4); }
   .read-scroll { overflow: visible; -webkit-mask-image: none; mask-image: none; }
-  .hint, .foot-note { display: none; }
+  .hint { display: none; }
   .field { font-size: 1rem; }
 }
 /* Landscape phones: the input and its button must share one screen, so the headline steps aside. */
@@ -312,9 +339,10 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
   .plate-core { padding: var(--s-4); }
   .rail-wrap { margin-inline: calc(var(--s-4) * -1); }
   .rail { padding-inline: var(--s-4); }
+  .detail { margin-inline: var(--s-4); }
   .line { grid-template-columns: 1.8rem minmax(0, 1fr); }
 }
-@media (max-width: 1200px) { .foot-note, .hint { display: none; } }
+@media (max-width: 1200px) { .hint { display: none; } }
 
 /* Reduced motion: no travel, no bounce. Fades and colour changes stay. */
 @media (prefers-reduced-motion: reduce) {
@@ -322,4 +350,5 @@ kbd { padding: 1px 6px; border: var(--stroke) solid var(--line-strong); border-r
   .js [data-reveal] { transition-property: opacity; }
   .btn:active:not(:disabled), .rail-chip:active { transform: none; }
   .rail-chip[data-active] { transform: none; }
+  .arcs .arc, .arcs .arc[data-rise='out'], .arc-marker path { transform: none; }
 }

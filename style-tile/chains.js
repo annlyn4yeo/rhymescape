@@ -7,7 +7,7 @@
    (8 shapes x 5 line styles) so combinations stay unique for 40 chains,
    and the letter label is always unique. */
 (function (global) {
-  'use strict';
+  "use strict";
 
   const GOLDEN_ANGLE = 137.50776405;
   const START_HUE = 354; // chain A starts near the pink ink
@@ -36,10 +36,12 @@
   }
 
   const lum = (c) => luminance(oklchToLinear(c.L, c.C, c.h));
-  const ratioOfY = (y1, y2) => (Math.max(y1, y2) + 0.05) / (Math.min(y1, y2) + 0.05);
+  const ratioOfY = (y1, y2) =>
+    (Math.max(y1, y2) + 0.05) / (Math.min(y1, y2) + 0.05);
   const contrast = (a, b) => ratioOfY(lum(a), lum(b));
   /* A chain colour may land on any stock, so it must pass on the hardest one. */
-  const worstContrast = (c, surfaces) => Math.min(...surfaces.map((s) => contrast(c, s)));
+  const worstContrast = (c, surfaces) =>
+    Math.min(...surfaces.map((s) => contrast(c, s)));
 
   /* Largest chroma that still fits in sRGB at this lightness and hue. */
   function maxChroma(L, h) {
@@ -53,12 +55,13 @@
     return lo;
   }
 
-  const fmt = (c) => `oklch(${c.L.toFixed(3)} ${c.C.toFixed(3)} ${c.h.toFixed(1)})`;
+  const fmt = (c) =>
+    `oklch(${c.L.toFixed(3)} ${c.C.toFixed(3)} ${c.h.toFixed(1)})`;
 
   function parseOklch(str) {
-    const m = /oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)/i.exec(str || '');
+    const m = /oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)/i.exec(str || "");
     if (!m) return null;
-    const L = m[1].endsWith('%') ? parseFloat(m[1]) / 100 : parseFloat(m[1]);
+    const L = m[1].endsWith("%") ? parseFloat(m[1]) / 100 : parseFloat(m[1]);
     return { L, C: parseFloat(m[2]), h: parseFloat(m[3]) };
   }
 
@@ -104,21 +107,30 @@
   }
 
   const MARKERS = [
-    { name: 'circle', d: 'M-4.4 0a4.4 4.4 0 1 0 8.8 0a4.4 4.4 0 1 0 -8.8 0Z' },
-    { name: 'square', d: 'M-3.8 -3.8H3.8V3.8H-3.8Z' },
-    { name: 'triangle', d: 'M0 -5.2L5 3.8H-5Z' },
-    { name: 'diamond', d: 'M0 -5.6L5.6 0L0 5.6L-5.6 0Z' },
-    { name: 'plus', d: 'M-1.7 -5.2H1.7V-1.7H5.2V1.7H1.7V5.2H-1.7V1.7H-5.2V-1.7H-1.7Z' },
-    { name: 'cross', d: 'M-3.6 -5.6L0 -2L3.6 -5.6L5.6 -3.6L2 0L5.6 3.6L3.6 5.6L0 2L-3.6 5.6L-5.6 3.6L-2 0L-5.6 -3.6Z' },
-    { name: 'hexagon', d: 'M-2.7 -4.7H2.7L5.4 0L2.7 4.7H-2.7L-5.4 0Z' },
-    { name: 'spark', d: 'M0 -6L1.6 -1.6L6 0L1.6 1.6L0 6L-1.6 1.6L-6 0L-1.6 -1.6Z' },
+    { name: "circle", d: "M-4.4 0a4.4 4.4 0 1 0 8.8 0a4.4 4.4 0 1 0 -8.8 0Z" },
+    { name: "square", d: "M-3.8 -3.8H3.8V3.8H-3.8Z" },
+    { name: "triangle", d: "M0 -5.2L5 3.8H-5Z" },
+    { name: "diamond", d: "M0 -5.6L5.6 0L0 5.6L-5.6 0Z" },
+    {
+      name: "plus",
+      d: "M-1.7 -5.2H1.7V-1.7H5.2V1.7H1.7V5.2H-1.7V1.7H-5.2V-1.7H-1.7Z",
+    },
+    {
+      name: "cross",
+      d: "M-3.6 -5.6L0 -2L3.6 -5.6L5.6 -3.6L2 0L5.6 3.6L3.6 5.6L0 2L-3.6 5.6L-5.6 3.6L-2 0L-5.6 -3.6Z",
+    },
+    { name: "hexagon", d: "M-2.7 -4.7H2.7L5.4 0L2.7 4.7H-2.7L-5.4 0Z" },
+    {
+      name: "spark",
+      d: "M0 -6L1.6 -1.6L6 0L1.6 1.6L0 6L-1.6 1.6L-6 0L-1.6 -1.6Z",
+    },
   ];
 
   /* text-decoration-style names double as the arc style names. */
-  const LINE_STYLES = ['solid', 'dashed', 'dotted', 'wavy', 'double'];
+  const LINE_STYLES = ["solid", "dashed", "dotted", "wavy", "double"];
 
   function chainLabel(i) {
-    let s = '';
+    let s = "";
     let n = i;
     do {
       s = String.fromCharCode(65 + (n % 26)) + s;
@@ -169,8 +181,14 @@
       const t = i / count;
       const u = 1 - t;
       pts.push([
-        u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
-        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1],
+        u * u * u * p0[0] +
+          3 * u * u * t * p1[0] +
+          3 * u * t * t * p2[0] +
+          t * t * t * p3[0],
+        u * u * u * p0[1] +
+          3 * u * u * t * p1[1] +
+          3 * u * t * t * p2[1] +
+          t * t * t * p3[1],
       ]);
     }
     return pts;
@@ -179,7 +197,13 @@
   /* Same-row rhyme arc: rises from a to b over the text. */
   function arcPoints(x1, x2, y, height) {
     const k = Math.min(0.36 * Math.abs(x2 - x1), height * 1.1);
-    return sampleCubic([x1, y], [x1 + Math.sign(x2 - x1) * k * 0.25, y - height * 1.28], [x2 - Math.sign(x2 - x1) * k * 0.25, y - height * 1.28], [x2, y], 56);
+    return sampleCubic(
+      [x1, y],
+      [x1 + Math.sign(x2 - x1) * k * 0.25, y - height * 1.28],
+      [x2 - Math.sign(x2 - x1) * k * 0.25, y - height * 1.28],
+      [x2, y],
+      56,
+    );
   }
 
   /* Cross-row route: up, along the lane, down the gutter, along, down. Rounded corners. */
@@ -198,7 +222,10 @@
       for (let s = 1; s < 8; s++) {
         const t = s / 8;
         const u = 1 - t;
-        pts.push([u * u * a[0] + 2 * u * t * cx + t * t * b[0], u * u * a[1] + 2 * u * t * cy + t * t * b[1]]);
+        pts.push([
+          u * u * a[0] + 2 * u * t * cx + t * t * b[0],
+          u * u * a[1] + 2 * u * t * cy + t * t * b[1],
+        ]);
       }
       pts.push(b);
     }
@@ -236,31 +263,50 @@
       const dx = b[0] - a[0];
       const dy = b[1] - a[1];
       const len = Math.hypot(dx, dy) || 1;
-      if (i > 0) along += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]);
+      if (i > 0)
+        along += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]);
       const o = fn(along);
       return [p[0] + (-dy / len) * o, p[1] + (dx / len) * o];
     });
   }
 
-  const toPath = (pts) => 'M' + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('L');
+  const toPath = (pts) =>
+    "M" + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L");
 
   /* Returns [{d, width, dash, cap}] strokes that render the given line style. */
   function strokesFor(style, pts) {
     const dense = resample(pts, 2.2);
     switch (style) {
-      case 'dashed':
-        return [{ d: toPath(pts), width: 2.4, dash: '9 6', cap: 'butt' }];
-      case 'dotted':
-        return [{ d: toPath(pts), width: 3.2, dash: '0.1 6.4', cap: 'round' }];
-      case 'wavy':
-        return [{ d: toPath(offsetPoints(dense, (s) => Math.sin(s / 2.1) * 2.6)), width: 2, dash: '', cap: 'round' }];
-      case 'double':
+      case "dashed":
+        return [{ d: toPath(pts), width: 2.4, dash: "9 6", cap: "butt" }];
+      case "dotted":
+        return [{ d: toPath(pts), width: 3.2, dash: "0.1 6.4", cap: "round" }];
+      case "wavy":
         return [
-          { d: toPath(offsetPoints(dense, () => -2.3)), width: 1.5, dash: '', cap: 'round' },
-          { d: toPath(offsetPoints(dense, () => 2.3)), width: 1.5, dash: '', cap: 'round' },
+          {
+            d: toPath(offsetPoints(dense, (s) => Math.sin(s / 2.1) * 2.6)),
+            width: 2,
+            dash: "",
+            cap: "round",
+          },
+        ];
+      case "double":
+        return [
+          {
+            d: toPath(offsetPoints(dense, () => -2.3)),
+            width: 1.5,
+            dash: "",
+            cap: "round",
+          },
+          {
+            d: toPath(offsetPoints(dense, () => 2.3)),
+            width: 1.5,
+            dash: "",
+            cap: "round",
+          },
         ];
       default:
-        return [{ d: toPath(pts), width: 2.6, dash: '', cap: 'round' }];
+        return [{ d: toPath(pts), width: 2.6, dash: "", cap: "round" }];
     }
   }
 

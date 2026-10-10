@@ -5,8 +5,8 @@ import './styles/app.css';
 import { detectRhymes, loadEngine, type AnalyzedVerse, type Engine, type RhymeChain } from './engine';
 import { createArcLayer } from './ui/arcs';
 import { generateChainColors, publishChainVars, readPalette, type ChainColor } from './ui/colors';
-import { markActiveChip, renderRail } from './ui/panels';
-import { renderReadView, soloChain } from './ui/readView';
+import { markActiveChip, renderDetail, renderRail } from './ui/panels';
+import { isLoose, renderReadView, soloChain } from './ui/readView';
 
 const $ = <T extends HTMLElement>(selector: string): T => {
   const node = document.querySelector<T>(selector);
@@ -24,9 +24,11 @@ const readView = $('#read-view');
 const readStage = $('#read-stage');
 const rail = $('#chain-rail');
 const railWrap = $('#rail-wrap');
-const readFoot = $('#read-foot');
+const detail = $('#chain-detail');
+const looseToggle = $<HTMLButtonElement>('#loose-toggle');
 // A rebuilt overlay (resize, fonts) has fresh elements: reapply whichever chain is isolated.
 const arcs = createArcLayer(readStage, document.querySelector<SVGSVGElement>('#arcs')!, () => soloChain(readStage, hovered ?? pinned));
+const colorsFor = new Map<string, ChainColor>(); // chain id -> colour, for the detail line
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,6 +44,8 @@ let engine: Engine | null = null;
 let result: Result | null = null;
 let pinned: string | null = null;
 let hovered: string | null = null;
+let showLoose = true;
+let shown: RhymeChain[] = [];
 let runId = 0;
 
 /** Hover wins over a pinned chain; with neither, everything is back to full strength. */
@@ -49,6 +53,7 @@ function applyFocus(): void {
   const id = hovered ?? pinned;
   soloChain(readStage, id);
   markActiveChip(rail, id, !reducedMotion());
+  renderDetail(detail, shown.find((c) => c.id === id) ?? null, id ? (colorsFor.get(id) ?? null) : null);
 }
 
 /** Arcs measure real glyph positions, so they wait for the fonts the read view uses. */
@@ -62,10 +67,19 @@ async function paint(): Promise<void> {
   const run = ++runId;
   pinned = null;
   hovered = null;
-  const { verse, chains } = result;
+  const { verse } = result;
+  const loose = result.chains.filter(isLoose).length;
+  const chains = (shown = showLoose ? result.chains : result.chains.filter((c) => !isLoose(c)));
   const palette = readPalette(root);
   const colors: ChainColor[] = generateChainColors(chains.length, palette);
   publishChainVars(root, colors);
+  colorsFor.clear();
+  chains.forEach((c, i) => colorsFor.set(c.id, colors[i]!));
+
+  // The toggle only exists when there is something loose to hide.
+  looseToggle.hidden = loose === 0;
+  looseToggle.setAttribute('aria-pressed', String(showLoose));
+  $('#loose-count').textContent = String(loose);
 
   workspace.removeAttribute('data-empty');
   renderReadView(readView, verse, chains, colors);
@@ -80,7 +94,7 @@ async function paint(): Promise<void> {
 
   const hasChains = chains.length > 0;
   railWrap.hidden = !hasChains;
-  readFoot.hidden = !hasChains;
+  renderDetail(detail, null, null);
   rail.scrollLeft = 0;
 
   if (!hasChains) {
@@ -104,8 +118,13 @@ async function paint(): Promise<void> {
   });
 
   await fontsReady();
-  if (run === runId) arcs.show(chains, colors, true);
+  if (run === runId) arcs.show(chains, colors);
 }
+
+looseToggle.addEventListener('click', () => {
+  showLoose = !showLoose;
+  paint().catch((error: unknown) => console.error('Could not render the verse', error));
+});
 
 function analyze(): void {
   if (!engine) return;

@@ -1,5 +1,3 @@
-import { gsap } from 'gsap';
-import { CustomEase } from 'gsap/CustomEase';
 import type { RhymeChain } from '../engine';
 import type { ChainColor, LineStyle } from './colors';
 
@@ -9,34 +7,20 @@ import type { ChainColor, LineStyle } from './colors';
  *    (all reads first, then all writes) and rebuilt on resize and when fonts finish loading.
  *  - Arcs between words on the same row rise above the text; arcs between rows swing out through the right gutter.
  *    Height (or swing) grows with distance; stroke thickness grows with the matched syllables.
- *  - Draw-in follows DESIGN.md: arcs rise from their baseline with --ease-drawer over --dur-reveal, staggered by line,
- *    markers pop with --ease-slap. Easing and duration are read from the CSS tokens, never duplicated here.
- *    Arcs start hidden and play when they scroll into view (IntersectionObserver), so a long verse only ever
- *    animates what is on screen.
- *  - prefers-reduced-motion: a plain fade, no travel, no stagger.
+ *  - Arcs are built hidden. soloChain() (readView.ts) marks the focused chain's arcs and markers .is-on and CSS
+ *    draws them in: an arc rises from its baseline, a gutter arc grows outward. Nothing here animates, so a
+ *    hover that changes mid-flight retargets instead of restarting.
  */
-
-gsap.registerPlugin(CustomEase);
-let easesReady = false;
 
 type Pt = readonly [number, number];
 const NS = 'http://www.w3.org/2000/svg';
 
 export interface ArcLayer {
-  /** Draws arcs for these chains (colours index-aligned). `animate` plays the draw-in. */
-  show(chains: readonly RhymeChain[], colors: readonly ChainColor[], animate: boolean): void;
+  /** Builds arcs for these chains (colours index-aligned). They stay hidden until their chain is focused. */
+  show(chains: readonly RhymeChain[], colors: readonly ChainColor[]): void;
   clear(): void;
 }
 
-/* ── Tokens ──────────────────────────────────────────────── */
-
-const token = (name: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const seconds = (name: string): number => {
-  const v = token(name);
-  return v.endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v);
-};
-const bezier = (name: string, fallback: string): string => /cubic-bezier\(([^)]+)\)/.exec(token(name))?.[1]?.replace(/\s/g, '') ?? fallback;
-const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clamp = (lo: number, v: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 /* ── Geometry (pure) ─────────────────────────────────────── */
@@ -158,13 +142,6 @@ function measure(stage: HTMLElement): Map<string, Anchor> {
 
 /* ── The layer ───────────────────────────────────────────── */
 
-interface Drawn {
-  readonly el: SVGGElement;
-  readonly rank: number; // line index, drives the stagger
-  readonly rise: 'up' | 'out';
-  readonly markers: SVGGElement[];
-}
-
 const el = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}): SVGElementTagNameMap[K] => {
   const node = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
@@ -175,25 +152,11 @@ const el = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
 export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement, onBuilt?: () => void): ArcLayer {
   let chains: readonly RhymeChain[] = [];
   let colors: readonly ChainColor[] = [];
-  let timelines: gsap.core.Timeline[] = [];
-  let observer: IntersectionObserver | null = null;
-  let waiting = new Map<Element, Drawn>();
   let queued = false;
   let lastWidth = -1; // arcs depend on line wrapping, so only a width change invalidates them
 
-  function stop(): void {
-    timelines.forEach((t) => t.kill());
-    timelines = [];
-    observer?.disconnect();
-    observer = null;
-    waiting = new Map();
-  }
-
-  /** `animate`: arcs start hidden and play as they scroll into view. Otherwise they are simply drawn. */
-  function build(animate: boolean): void {
-    stop();
+  function build(): void {
     svg.replaceChildren();
-    svg.classList.remove('is-settled');
     if (chains.length === 0) return;
 
     const width = stage.clientWidth;
@@ -204,7 +167,6 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement, onBuilt?:
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     svg.setAttribute('width', String(width));
     svg.setAttribute('height', String(height));
-    const drawn: Drawn[] = [];
     const arcLayer = el('g');
     const markerLayer = el('g');
     svg.append(arcLayer, markerLayer);
@@ -250,7 +212,7 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement, onBuilt?:
           ends = [p0, p3];
         }
 
-        const g = el('g', { class: 'arc', 'data-chain': chain.id, 'data-style': color.lineStyle, style: vars });
+        const g = el('g', { class: 'arc', 'data-chain': chain.id, 'data-style': color.lineStyle, 'data-rise': sameRow ? 'up' : 'out', style: vars });
         g.append(el('path', { class: 'hit', d: toPath(pts) }));
         for (const s of strokesFor(color.lineStyle, pts, thickness)) {
           const p = el('path', { d: s.d, 'stroke-width': s.width.toFixed(2), 'stroke-linecap': s.cap });
@@ -258,103 +220,38 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement, onBuilt?:
           g.append(p);
         }
         arcLayer.append(g);
-        drawn.push({ el: g, rank: a.line, rise: sameRow ? 'up' : 'out', markers: ends.map(([x, y]) => addMarker(x, y)) });
+        ends.forEach(([x, y]) => addMarker(x, y));
       }
     });
 
-    if (!animate || drawn.length === 0) {
-      svg.classList.add('is-settled');
-      onBuilt?.();
-      return;
-    }
-    // Hide everything now (inline, so GSAP's clearProps restores the natural state), reveal on intersection.
-    observer = new IntersectionObserver(
-      (entries) => {
-        const batch = entries.filter((e) => e.isIntersecting).map((e) => waiting.get(e.target)!);
-        batch.forEach((d) => {
-          observer?.unobserve(d.el);
-          waiting.delete(d.el);
-        });
-        if (batch.length) reveal(batch);
-      },
-      { rootMargin: '0px 0px -4% 0px' },
-    );
-    for (const d of drawn) {
-      d.el.style.opacity = '0';
-      d.markers.forEach((m) => (m.style.opacity = '0'));
-      waiting.set(d.el, d);
-      observer.observe(d.el);
-    }
     onBuilt?.();
   }
 
-  /** Arcs rise from their baseline, line by line; markers pop in after them. Tokens drive every number. */
-  function reveal(batch: readonly Drawn[]): void {
-    const reduce = reducedMotion();
-    const dur = seconds('--dur-reveal');
-    if (!easesReady) {
-      CustomEase.create('rs-drawer', bezier('--ease-drawer', '0.32,0.72,0,1'));
-      CustomEase.create('rs-slap', bezier('--ease-slap', '0.34,1.56,0.64,1'));
-      easesReady = true;
-    }
-
-    const ranks = [...new Set(batch.map((d) => d.rank))].sort((x, y) => x - y);
-    const step = reduce ? 0 : Math.min(0.07, 0.7 / ranks.length);
-    const at = (rank: number): number => ranks.indexOf(rank) * step;
-
-    // Marker groups carry their position in a transform attribute: only their opacity and inner shape are tweened.
-    const groups = batch.flatMap((d) => [d.el, ...d.markers]);
-    const shapes = batch.flatMap((d) => d.markers.map((m) => m.firstElementChild!));
-    const tl = gsap.timeline({
-      onComplete: () => {
-        gsap.set(groups, { clearProps: 'opacity,transform,transformOrigin' });
-        gsap.set(shapes, { clearProps: 'opacity,transform,transformOrigin' });
-        timelines = timelines.filter((t) => t !== tl);
-        if (waiting.size === 0 && timelines.length === 0) svg.classList.add('is-settled');
-      },
-    });
-    timelines.push(tl);
-
-    for (const d of batch) {
-      tl.fromTo(
-        d.el,
-        reduce ? { opacity: 0 } : d.rise === 'up' ? { opacity: 0, scaleY: 0.5, transformOrigin: '50% 100%' } : { opacity: 0, scaleX: 0.5, transformOrigin: '0% 50%' },
-        { opacity: 1, scaleX: 1, scaleY: 1, duration: dur, ease: 'rs-drawer' },
-        at(d.rank),
-      );
-      const popAt = at(d.rank) + (reduce ? 0 : dur * 0.4);
-      d.markers.forEach((m) => {
-        tl.fromTo(m, { opacity: 0 }, { opacity: 1, duration: reduce ? dur : dur * 0.3, ease: 'none' }, popAt);
-        if (!reduce) tl.fromTo(m.firstElementChild!, { scale: 0.4, transformOrigin: '50% 50%' }, { scale: 1, duration: dur * 0.6, ease: 'rs-slap' }, popAt);
-      });
-    }
-  }
-
-  // Rebuild (no animation) whenever the stage reflows or fonts finish loading.
+  // Rebuild whenever the stage reflows or fonts finish loading.
   const requestRebuild = (): void => {
     if (queued || chains.length === 0) return;
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
-      build(false);
+      build();
     });
   };
-  // Height changes (a verse rendering, the rail appearing) must not rebuild: that would cancel a draw-in in progress.
+  // Height changes (a verse rendering, the rail appearing) do not move the words, so only a width change rebuilds.
   new ResizeObserver(() => {
     if (stage.clientWidth !== lastWidth) requestRebuild();
   }).observe(stage);
   document.fonts.addEventListener('loadingdone', requestRebuild);
 
   return {
-    show(nextChains, nextColors, animate) {
+    show(nextChains, nextColors) {
       chains = nextChains;
       colors = nextColors;
-      build(animate);
+      build();
     },
     clear() {
       chains = [];
       colors = [];
-      build(false);
+      build();
     },
   };
 }

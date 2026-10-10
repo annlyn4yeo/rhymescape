@@ -114,7 +114,7 @@ export function renderReadView(container: HTMLElement, verse: AnalyzedVerse, cha
   if (verse.lines.length === 0) container.append(el('p', 'empty-note', 'No words found. Type a few lines first.'));
 }
 
-/** Focus one chain: every other highlight, tag and legend entry dims. Pass null to clear. */
+/** Focus one chain: every other highlight, tag, arc and rail chip dims. Pass null to clear. */
 export function soloChain(scope: ParentNode, id: string | null): void {
   scope.querySelectorAll<HTMLElement>('[data-chain]').forEach((node) => node.classList.toggle('is-dim', id !== null && node.dataset.chain !== id));
 }

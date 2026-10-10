@@ -26,60 +26,71 @@ function markerIcon(color: ChainColor): SVGSVGElement {
   return svg;
 }
 
-export interface LegendHandlers {
+export interface RailHandlers {
   readonly onHover: (id: string | null) => void;
   readonly onPin: (id: string | null) => void;
 }
 
-/** One entry per chain: marker, letter, rhyme sound, syllable count, members. Hover or focus isolates the chain. */
-export function renderLegend(container: HTMLElement, chains: readonly RhymeChain[], colors: readonly ChainColor[], { onHover, onPin }: LegendHandlers): void {
-  container.textContent = '';
+/**
+ * The chain rail: one chip per chain with its marker, letter, rhyme sound and syllable count.
+ * It sits above the verse, so chains are always on screen. Hover or focus isolates a chain; click pins it.
+ */
+export function renderRail(rail: HTMLElement, chains: readonly RhymeChain[], colors: readonly ChainColor[], { onHover, onPin }: RailHandlers): void {
+  rail.textContent = '';
   let pinned: string | null = null;
-  const buttons: HTMLButtonElement[] = [];
+  const chips: HTMLButtonElement[] = [];
 
   chains.forEach((chain, i) => {
     const color = colors[i]!;
     const li = el('li');
-    const button = el('button', 'legend-item');
-    button.type = 'button';
-    button.setAttribute('aria-pressed', 'false');
-    button.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
-    button.style.setProperty('--chain-wash', `var(--chain-${color.index}-wash)`);
-    button.style.setProperty('--i', String(Math.min(i, 12)));
+    const chip = el('button', 'rail-chip');
+    chip.type = 'button';
+    chip.dataset.chain = chain.id;
+    chip.setAttribute('aria-pressed', 'false');
+    chip.style.setProperty('--chain-ink', `var(--chain-${color.index}-ink)`);
+    chip.style.setProperty('--i', String(Math.min(i, 10)));
 
-    const head = el('span', 'legend-head');
-    const letter = el('span', 'tag', color.label);
-    const sound = el('span', 'sound', chain.sound + (chain.kind === 'slant' ? '~' : ''));
-    head.append(markerIcon(color), letter, sound);
+    const top = el('span', 'chip-top');
+    top.append(markerIcon(color), el('span', 'tag', color.label), el('span', 'sound', chain.sound + (chain.kind === 'slant' ? '~' : '')));
 
-    const count = el('span', 'syl');
-    count.append(el('b', undefined, String(chain.syllables)), document.createTextNode(` ${chain.syllables === 1 ? 'syllable' : 'syllables'}`));
+    const bottom = el('span', 'chip-bottom');
+    bottom.append(el('b', undefined, String(chain.syllables)), el('span', 'unit', chain.syllables === 1 ? 'syl' : 'syls'), el('span', 'kind', chain.kind + (chain.approximate ? ' ≈' : '')));
 
-    const kind = el('span', 'kind', chain.kind + (chain.approximate ? ' ≈' : ''));
-    kind.title = describeChain(chain);
+    chip.append(top, bottom);
+    chip.title = chain.members.map((m) => m.text).join(' · ');
+    chip.setAttribute('aria-label', `Chain ${color.label}: ${describeChain(chain)}, ${plural(chain.members.length, 'member')}: ${chain.members.map((m) => m.text).join(', ')}. Press to pin.`);
 
-    const words = el('span', 'words');
-    const sample = el('span', 'sample', chain.members[0]!.text);
-    sample.dataset.line = color.lineStyle;
-    words.append(sample, document.createTextNode(chain.members.length > 1 ? ` + ${plural(chain.members.length - 1, 'more')}` : ''));
-    words.title = chain.members.map((m) => m.text).join(' · ');
-
-    button.append(head, count, kind, words);
-    button.setAttribute('aria-label', `Chain ${color.label}: ${describeChain(chain)}, ${plural(chain.members.length, 'member')}. Press to pin.`);
-
-    button.addEventListener('pointerenter', () => onHover(chain.id));
-    button.addEventListener('pointerleave', () => onHover(null));
-    button.addEventListener('focus', () => onHover(chain.id));
-    button.addEventListener('blur', () => onHover(null));
-    button.addEventListener('click', () => {
+    chip.addEventListener('pointerenter', () => onHover(chain.id));
+    chip.addEventListener('pointerleave', () => onHover(null));
+    chip.addEventListener('focus', () => onHover(chain.id));
+    chip.addEventListener('blur', () => onHover(null));
+    chip.addEventListener('click', () => {
       pinned = pinned === chain.id ? null : chain.id;
-      buttons.forEach((b, k) => b.setAttribute('aria-pressed', String(pinned === chains[k]!.id)));
+      chips.forEach((c, k) => c.setAttribute('aria-pressed', String(pinned === chains[k]!.id)));
       onPin(pinned);
     });
-    buttons.push(button);
-    li.append(button);
-    container.append(li);
+    chips.push(chip);
+    li.append(chip);
+    rail.append(li);
   });
+}
+
+/** Marks the chip of the chain currently in focus (hovered or pinned) and keeps it in view inside the rail. */
+export function markActiveChip(rail: HTMLElement, id: string | null, smooth: boolean): void {
+  rail.querySelectorAll<HTMLElement>('.rail-chip').forEach((chip) => {
+    const active = id !== null && chip.dataset.chain === id;
+    chip.toggleAttribute('data-active', active);
+    if (active) chip.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+  });
+}
+
+/** The pill in the footer: a one-glance verdict. Details live in the sheet it opens. */
+export function renderVerdict(button: HTMLElement, label: HTMLElement, report: ContrastReport): void {
+  const ok = report.passing === report.rows.length && report.range.passing === report.range.count;
+  button.classList.toggle('bad', !ok);
+  label.textContent = ok
+    ? `AA ${report.passing}/${report.rows.length} · lowest ${ratioText(report.minimum)}`
+    : `${report.rows.length - report.passing} below AA · lowest ${ratioText(report.minimum)}`;
 }
 
 /** Summary banner plus one row per chain: ink on stock, body ink on wash, tag text on ink. */
@@ -88,7 +99,7 @@ export function renderContrast(container: HTMLElement, report: ContrastReport): 
   const okAll = report.passing === report.rows.length;
   const okRange = report.range.passing === report.range.count;
 
-  const summary = el('p', `summary ${okAll && okRange ? 'ok' : 'bad'}`);
+  const summary = el('p', `summary ${okAll && okRange ? '' : 'bad'}`);
   summary.append(
     el('b', undefined, okAll ? 'All pass' : `${report.rows.length - report.passing} fail`),
     document.createTextNode(` · ${report.passing}/${report.rows.length} chains clear WCAG AA (${AA}:1) on every stock · lowest ${ratioText(report.minimum)}`),
@@ -101,10 +112,7 @@ export function renderContrast(container: HTMLElement, report: ContrastReport): 
   const body = el('tbody');
   report.rows.forEach((row, i) => {
     const tr = el('tr');
-    const cell = (value: number): HTMLTableCellElement => {
-      const td = el('td', value >= AA ? '' : 'low', ratioText(value));
-      return td;
-    };
+    const cell = (value: number): HTMLTableCellElement => el('td', value >= AA ? '' : 'low', ratioText(value));
     const th = el('th');
     th.scope = 'row';
     const tag = el('span', 'tag mini', row.label);

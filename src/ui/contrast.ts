@@ -4,7 +4,7 @@ import { generateChainColors, ratioOfLuminance, type ChainColor, type Palette } 
  * Contrast check. Colours are measured as the browser actually renders them (drawn to a canvas and
  * read back), not from our own maths, so gamut mapping or rounding cannot hide a failure.
  * Three pairs occur in the UI for every chain:
- *   ink  on every stock          underline, marker, legend swatch
+ *   ink  on every stock          underline, marker, rail chip
  *   body ink on the wash         highlighted syllables
  *   tag text on the ink          the letter tags
  */

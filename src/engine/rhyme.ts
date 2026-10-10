@@ -35,6 +35,8 @@ interface SPhone {
 interface Stream {
   readonly phones: SPhone[];
   readonly vowels: number[];
+  /** vowelsBefore[i] = number of vowels in phones[0, i). Length phones.length + 1. */
+  readonly vowelsBefore: number[];
   readonly prevVowel: number[];
   readonly wordStart: number[];
   readonly wordEnd: number[];
@@ -88,6 +90,7 @@ function buildStream(line: AnalyzedLine, swap?: { word: number; pronunciation: P
     sylEnd.push(sylRefs.length);
   });
   const vowels: number[] = [];
+  const vowelsBefore: number[] = [0];
   const prevVowel: number[] = [];
   let last = -1;
   phones.forEach((p, i) => {
@@ -96,10 +99,12 @@ function buildStream(line: AnalyzedLine, swap?: { word: number; pronunciation: P
       vowels.push(i);
       last = i;
     }
+    vowelsBefore.push(vowels.length);
   });
   return {
     phones,
     vowels,
+    vowelsBefore,
     prevVowel,
     wordStart,
     wordEnd,
@@ -135,7 +140,7 @@ function exactLink(a: Variant, b: Variant, multi: boolean): Link | null {
   let curA = firstVowelFrom(a.stream, a.end - k, a.end);
   let curB = firstVowelFrom(b.stream, b.end - k, b.end);
   if (curA < 0 || curB < 0) return null;
-  let syllables = a.stream.vowels.filter((v) => v >= curA && v < a.end).length;
+  let syllables = a.stream.vowelsBefore[a.end]! - a.stream.vowelsBefore[curA]!;
 
   // Earlier syllables: same vowel and same coda; the onset of the syllable after it may differ.
   // Repeated words never count: "I'm fly" / "I'm shy" is one syllable of rhyme, not two.
@@ -166,15 +171,23 @@ function exactLink(a: Variant, b: Variant, multi: boolean): Link | null {
 
 /** Last `n` vowels of a site, each with the consonants that follow it (up to the next vowel or the word end). */
 function chunks(site: Variant, n: number): { vowel: string; consonants: string[] }[] | null {
-  const vs = site.stream.vowels.filter((v) => v < site.end);
-  if (vs.length < n) return null;
-  return vs.slice(vs.length - n).map((v, i, arr) => {
+  const upTo = site.stream.vowelsBefore[site.end]!;
+  if (upTo < n) return null;
+  return site.stream.vowels.slice(upTo - n, upTo).map((v, i, arr) => {
     const stop = arr[i + 1] ?? site.end;
     return { vowel: site.stream.phones[v]!.sym, consonants: site.stream.phones.slice(v + 1, stop).map((p) => p.sym) };
   });
 }
 
+/** The vowel that ends the word's sound: the last one before its end. */
+const lastVowel = (v: Variant): string | undefined => {
+  const i = v.stream.vowelsBefore[v.end]! - 1;
+  return i < 0 ? undefined : v.stream.phones[v.stream.vowels[i]!]!.sym;
+};
+
 function slantLink(a: Variant, b: Variant, tolerance: number): Link | null {
+  // Different final vowels can never be a slant rhyme; this rejects most pairs without allocating.
+  if (lastVowel(a) !== lastVowel(b)) return null;
   const n = Math.max(a.tailVowels, b.tailVowels);
   const ca = chunks(a, n);
   const cb = chunks(b, n);
@@ -198,7 +211,7 @@ function variantAt(stream: Stream, wi: number): Variant | null {
   for (let i = end - 1; i >= start; i--) {
     const p = stream.phones[i]!;
     if (p.vowel && p.stress !== null && p.stress >= 1) {
-      return { stream, end, tailLen: end - i, tailVowels: stream.vowels.filter((v) => v >= i && v < end).length };
+      return { stream, end, tailLen: end - i, tailVowels: stream.vowelsBefore[end]! - stream.vowelsBefore[i]! };
     }
   }
   return null;
@@ -253,25 +266,37 @@ export function detectRhymes(verse: AnalyzedVerse, options: RhymeOptions = {}): 
   const n = sites.length;
   const key = (i: number, j: number): number => (i < j ? i * n + j : j * n + i);
   const links = new Map<number, Link>();
-  const compared = new Set<number>();
   const wantExact = modes.has('perfect') || modes.has('multi');
   const wantSlant = modes.has('slant') && tolerance > 0;
 
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      const a = sites[i]!;
-      const b = sites[j]!;
-      const bothEnd = a.position === 'end' && b.position === 'end';
-      if (!bothEnd && !(a.line === b.line || scope === 'verse')) continue;
-      compared.add(key(i, j));
+  // Which pairs are ever compared: end words with end words, anything with a word of its own line,
+  // and (scope 'verse') everything. Only those are generated, and only those can block a merge later.
+  const isCompared = (a: Site, b: Site): boolean => (a.position === 'end' && b.position === 'end') || a.line === b.line || scope === 'verse';
 
-      let link = bestLink(a, b, modes.has('multi'), wantExact, tolerance, wantSlant);
-      if (link?.kind === 'repeat') {
-        link = allowRepeats ? { ...link, kind: 'perfect' } : link;
-      } else if (link && link.kind !== 'slant' && !modes.has(link.kind)) {
-        link = null; // e.g. a multi match when only 'perfect' was asked for
-      }
-      if (link) links.set(key(i, j), link);
+  const consider = (i: number, j: number): void => {
+    let link = bestLink(sites[i]!, sites[j]!, modes.has('multi'), wantExact, tolerance, wantSlant);
+    if (link?.kind === 'repeat') {
+      link = allowRepeats ? { ...link, kind: 'perfect' } : link;
+    } else if (link && link.kind !== 'slant' && !modes.has(link.kind)) {
+      link = null; // e.g. a multi match when only 'perfect' was asked for
+    }
+    if (link) links.set(key(i, j), link);
+  };
+
+  const endIds = sites.filter((x) => x.position === 'end').map((x) => x.id);
+  const lineSites: number[][] = [];
+  for (const x of sites) (lineSites[x.line] ??= []).push(x.id);
+  let nextEnd = 0; // index into endIds of the first end site after the current one
+  for (let i = 0; i < n; i++) {
+    const a = sites[i]!;
+    if (scope === 'verse') {
+      for (let j = i + 1; j < n; j++) consider(i, j);
+      continue;
+    }
+    for (const j of lineSites[a.line]!) if (j > i) consider(i, j);
+    if (a.position === 'end') {
+      while (nextEnd < endIds.length && endIds[nextEnd]! <= i) nextEnd++;
+      for (let e = nextEnd; e < endIds.length; e++) consider(i, endIds[e]!);
     }
   }
 
@@ -279,14 +304,14 @@ export function detectRhymes(verse: AnalyzedVerse, options: RhymeOptions = {}): 
   const strength = (l: Link): number => (l.kind === 'slant' ? 500 - l.cost * 100 : 1000 + l.syllables * 10 + (l.kind === 'multi' ? 5 : 0));
   const edges = [...links]
     .filter(([, l]) => l.kind !== 'repeat')
-    .map(([k, l]) => ({ i: Math.floor(k / n), j: k % n, l }))
-    .sort((x, y) => strength(y.l) - strength(x.l) || x.i - y.i || x.j - y.j);
+    .map(([k, l]) => ({ i: Math.floor(k / n), j: k % n, l, w: strength(l) }))
+    .sort((x, y) => y.w - x.w || x.i - y.i || x.j - y.j);
 
   const chosen = new Map<number, number>(); // site -> pronunciation index used by its strongest link
   const clusterOf = sites.map((_, i) => i);
   const clusters = new Map<number, number[]>(sites.map((_, i) => [i, [i]]));
   const compatible = (x: readonly number[], y: readonly number[]): boolean =>
-    x.every((p) => y.every((q) => !compared.has(key(p, q)) || links.has(key(p, q))));
+    x.every((p) => y.every((q) => !isCompared(sites[p]!, sites[q]!) || links.has(key(p, q))));
 
   for (const { i, j, l } of edges) {
     const ci = clusterOf[i]!;

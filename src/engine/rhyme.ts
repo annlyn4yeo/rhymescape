@@ -324,8 +324,7 @@ export function detectRhymes(verse: AnalyzedVerse, options: RhymeOptions = {}): 
     })
     .sort((x, y) => x.ids[0]! - y.ids[0]!);
 
-  const used = new Map<string, number>();
-  return raw.map(({ ids, kind, syllables, slantCost }): RhymeChain => {
+  const built = raw.map(({ ids, kind, syllables, slantCost }) => {
     const members = ids.map((id): RhymeMember => {
       const s = sites[id]!;
       const st = (s.variants[chosen.get(id) ?? 0] ?? s.variants[0]!).stream;
@@ -351,17 +350,20 @@ export function detectRhymes(verse: AnalyzedVerse, options: RhymeOptions = {}): 
     const tail = longest.stream.phones.slice(longest.end - longest.tailLen, longest.end);
     const sound = (kind === 'slant' ? tail.filter((p) => p.vowel) : tail).map((p) => p.sym).join(' ');
     const base = sound.toLowerCase().replace(/ /g, '-') + (kind === 'slant' ? '~' : '');
-    const seen = (used.get(base) ?? 0) + 1;
-    used.set(base, seen);
+    return { id: base, kind, syllables, sound, members, approximate: members.some((m) => m.approximate), slantCost } satisfies RhymeChain;
+  });
 
-    return {
-      id: seen === 1 ? base : `${base}-${seen}`,
-      kind,
-      syllables,
-      sound,
-      members,
-      approximate: members.some((m) => m.approximate),
-      slantCost,
-    };
+  /* A chain whose every member sits inside a member of one longer chain is redundant:
+     "bad"/"mad" next to the multi "bad habit"/"mad rabbit". Drop it, then number duplicate IDs. */
+  const before = (x: SyllableRef, y: SyllableRef): boolean => x.word < y.word || (x.word === y.word && x.syllable <= y.syllable);
+  const inside = (inner: RhymeMember, outer: RhymeMember): boolean =>
+    inner.line === outer.line && before(outer.start, inner.start) && before(inner.end, outer.end);
+  const kept = built.filter((x) => !built.some((y) => y !== x && y.syllables > x.syllables && x.members.every((m) => y.members.some((o) => inside(m, o)))));
+
+  const used = new Map<string, number>();
+  return kept.map((c): RhymeChain => {
+    const seen = (used.get(c.id) ?? 0) + 1;
+    used.set(c.id, seen);
+    return seen === 1 ? c : { ...c, id: `${c.id}-${seen}` };
   });
 }

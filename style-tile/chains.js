@@ -64,11 +64,11 @@
 
   /* ── Chain generation ────────────────────────────────── */
 
-  /* Lightest (on dark stock: darkest) lightness at which the ink still clears
-     MIN_CONTRAST against the surface, at the chain's hue, with chroma capped by the gamut. */
-  function solveInk(h, chromaWanted, surfaces, isDark, lightnessNudge) {
-    const step = isDark ? 0.005 : -0.005;
-    let L = isDark ? 0.5 : 0.8;
+  /* Lightest lightness at which the ink still clears MIN_CONTRAST against every surface,
+     at the chain's hue, with chroma capped by the gamut. */
+  function solveInk(h, chromaWanted, surfaces, lightnessNudge) {
+    const step = -0.005;
+    let L = 0.8;
     let best = null;
     for (let i = 0; i < 120; i++, L += step) {
       const C = Math.min(chromaWanted, maxChroma(L, h) * 0.97);
@@ -78,13 +78,13 @@
         break;
       }
     }
-    if (!best) best = { L: isDark ? 0.98 : 0.2, C: 0.02, h };
+    if (!best) best = { L: 0.2, C: 0.02, h };
     if (lightnessNudge) {
       // Alternate chains sit a touch deeper so neighbours differ in value as well as hue.
-      const L2 = best.L + (isDark ? lightnessNudge : -lightnessNudge);
+      const L2 = best.L - lightnessNudge;
       best = { L: L2, C: Math.min(chromaWanted, maxChroma(L2, h) * 0.97), h };
       while (worstContrast(best, surfaces) < MIN_CONTRAST) {
-        best.L += isDark ? 0.005 : -0.005;
+        best.L -= 0.005;
         best.C = Math.min(chromaWanted, maxChroma(best.L, h) * 0.97);
       }
     }
@@ -92,13 +92,13 @@
   }
 
   /* Highlighter fill that the page's body ink can sit on at 4.5:1. */
-  function solveWash(h, text, isDark) {
-    let L = isDark ? 0.42 : 0.87;
+  function solveWash(h, text) {
+    let L = 0.87;
     let c;
     for (let i = 0; i < 60; i++) {
       c = { L, C: Math.min(0.17, maxChroma(L, h) * 0.95), h };
       if (contrast(c, text) >= MIN_CONTRAST) break;
-      L += isDark ? -0.005 : 0.005;
+      L += 0.005;
     }
     return c;
   }
@@ -129,13 +129,13 @@
 
   /* surfaces: every stock a chain colour can land on. text: body ink. All {L,C,h}.
      Returns n chains; there is no upper limit. */
-  function generateChains(n, surfaces, text, isDark) {
+  function generateChains(n, surfaces, text) {
     const out = [];
     for (let i = 0; i < n; i++) {
       const h = (START_HUE + i * GOLDEN_ANGLE) % 360;
       const chromaWanted = i % 2 === 0 ? 0.2 : 0.17;
-      const ink = solveInk(h, chromaWanted, surfaces, isDark, i % 2 === 0 ? 0 : 0.035);
-      const wash = solveWash(h, text, isDark);
+      const ink = solveInk(h, chromaWanted, surfaces, i % 2 === 0 ? 0 : 0.035);
+      const wash = solveWash(h, text);
       out.push({
         index: i,
         label: chainLabel(i),

@@ -1,4 +1,4 @@
-/* Style tile behaviour: theme, generated chain colours, live contrast report,
+/* Style tile behaviour: generated chain colours, live contrast report,
    verse rendering and the font-ready gate. Prototype only; no engine code. */
 (function () {
   'use strict';
@@ -6,7 +6,6 @@
   const root = document.documentElement;
   const $ = (sel, scope = document) => scope.querySelector(sel);
   const $$ = (sel, scope = document) => [...scope.querySelectorAll(sel)];
-  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const STOCKS = ['--paper', '--paper-raised', '--paper-sunk'];
   const MAX_CHAINS = 26;
@@ -14,7 +13,6 @@
 
   const cssVar = (name) => getComputedStyle(root).getPropertyValue(name).trim();
   const tokenColor = (name) => C.parseOklch(cssVar(name));
-  const isDark = () => root.dataset.theme === 'dark';
   const svg = (name, attrs = {}) => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', name);
     Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
@@ -24,7 +22,7 @@
   /* ── Chain colours: regenerated whenever the stock changes ── */
   let chains = [];
   function regenerate() {
-    chains = C.generateChains(MAX_CHAINS, STOCKS.map(tokenColor), tokenColor('--ink'), isDark());
+    chains = C.generateChains(MAX_CHAINS, STOCKS.map(tokenColor), tokenColor('--ink'));
     C.applyChainVars(root, chains);
   }
   const chainStyle = (i) => `--chain-ink: var(--chain-${i}-ink); --chain-wash: var(--chain-${i}-wash);`;
@@ -53,8 +51,7 @@
     [['Hot pink', '--fl-pink'], ['Orange', '--fl-orange'], ['Yellow', '--fl-yellow'], ['Mint', '--fl-mint'], ['Blue', '--fl-blue']].forEach(([n, v]) =>
       add(`Print ink on ${n.toLowerCase()}`, '--on-fl', v, C.contrast(tc('--on-fl'), tc(v))),
     );
-    const darkStock = isDark() ? '--paper-raised' : '--paper-sunk';
-    chains.slice(0, 4).forEach((c) => add(`Chain ${c.label} ink, hardest stock`, `--chain-${c.index}-ink`, darkStock, c.inkRatio));
+    chains.slice(0, 4).forEach((c) => add(`Chain ${c.label} ink, hardest stock`, `--chain-${c.index}-ink`, '--paper-sunk', c.inkRatio));
     chains.slice(0, 4).forEach((c) => add(`Body ink on chain ${c.label} wash`, '--ink', `--chain-${c.index}-wash`, c.washRatio));
 
     const ul = $('#contrast-report');
@@ -168,7 +165,7 @@
     });
   }).observe(stage);
 
-  /* ── Theme ──────────────────────────────────────────── */
+  /* ── Render ─────────────────────────────────────────── */
   function renderAll(animateVerse) {
     renderTokens();
     renderContrast();
@@ -176,18 +173,6 @@
     renderLegend();
     if (root.classList.contains('fonts-ready')) drawVerse(animateVerse);
   }
-
-  function setTheme(theme) {
-    const apply = () => {
-      root.dataset.theme = theme;
-      $$('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === theme)));
-      regenerate();
-      renderAll(false);
-    };
-    if (document.startViewTransition && !reducedMotion()) document.startViewTransition(apply);
-    else apply();
-  }
-  $$('[data-theme-set]').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
 
   /* ── Controls ───────────────────────────────────────── */
   const slider = $('#chain-count');
@@ -234,11 +219,6 @@
   }
 
   /* ── Boot ───────────────────────────────────────────── */
-  const qTheme = new URLSearchParams(location.search).get('theme');
-  if (qTheme === 'dark') {
-    root.dataset.theme = 'dark';
-    $$('[data-theme-set]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === 'dark')));
-  }
   regenerate();
   V.build(stage);
   renderAll(false);

@@ -1,49 +1,23 @@
 # Rhymescape
 
-Rhymescape is a lyric-writing tool for exploring rhyme, pronunciation, syllables, and flow. It combines a rhyme engine with a visual verse-analyzer interface.
+Rhymescape is a lyric-writing tool built around pronunciation, syllable, rhyme, and flow analysis.
 
-## Run locally
+## Technology
 
-Requirements: Node.js and npm.
+- **TypeScript** powers the application and rhyme-analysis logic with checked data structures and module boundaries.
+- **Vite** bundles the browser application and provides the build pipeline.
+- **CMUdict** supplies pronunciation data. Its ARPABET phonemes give the rhyme engine a sound-based foundation.
+- **Custom rhyme engine** tokenizes text, resolves pronunciations, handles numbers and slang, counts syllables, and compares phoneme patterns to identify rhyme relationships.
+- **Browser-native HTML and CSS** form the interface without a component framework, keeping the writing surface lightweight and direct.
+- **GSAP** provides motion and interaction feedback where animation helps communicate changes in the analysis view.
+- **Bricolage Grotesque** and **Martian Mono** define the visual typography: expressive text for writing and a technical monospace face for analysis details.
 
-```bash
-npm install
-npm run dev
-```
+## Architecture
 
-Then open the local URL printed by Vite, usually `http://localhost:5173`.
+The app is divided into three layers:
 
-## Useful commands
+1. **Engine** — pronunciation lookup, phoneme processing, syllabification, tokenization, and rhyme scoring.
+2. **UI** — verse reading views, analysis panels, color systems, and interaction behavior.
+3. **Styles** — the visual system, typography, layout, and motion presentation.
 
-```bash
-npm run typecheck   # Check TypeScript without creating a build
-npm run build       # Create a production build
-npm run preview     # Preview the production build locally
-npm run tile        # Open the visual style tile
-```
-
-## How it works
-
-- **Vite** runs the local development server and bundles the app for production.
-- **TypeScript** makes the application code safer by checking data shapes and function inputs before it runs.
-- **The rhyme engine** tokenizes text, looks up pronunciations, counts syllables, and compares sounds to find rhyme relationships.
-- **CMUdict** provides a large pronunciation dictionary. The engine uses its ARPABET phoneme data as the sound-based foundation for rhyme matching.
-- **The UI** is built with browser-native HTML and CSS, with small TypeScript modules for panels, reading views, colors, and visual details.
-- **GSAP** handles interface motion where animated feedback improves the writing experience.
-- **Bricolage Grotesque** and **Martian Mono** provide the display and technical type styles.
-
-## Project layout
-
-```text
-src/
-  main.ts                 App entry point
-  engine/                 Pronunciation, syllable, and rhyme logic
-  ui/                     Interface modules
-  styles/                 Application styles
-style-tile/               Visual design reference and tokens
-scripts/                  Small build and development helpers
-```
-
-## Status
-
-Rhymescape is an active prototype. The core rhyme engine and first verse-analyzer interface are in place, while the writing workflow and analysis features continue to evolve.
+The engine is kept separate from the UI so rhyme and pronunciation analysis can evolve independently from the writing interface.

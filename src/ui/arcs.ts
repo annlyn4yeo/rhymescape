@@ -17,6 +17,7 @@ import type { ChainColor, LineStyle } from './colors';
  */
 
 gsap.registerPlugin(CustomEase);
+let easesReady = false;
 
 type Pt = readonly [number, number];
 const NS = 'http://www.w3.org/2000/svg';
@@ -170,13 +171,15 @@ const el = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
   return node;
 };
 
-export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement): ArcLayer {
+/** `onBuilt` runs after every (re)build, so callers can restore state that lives on the new elements (a dimmed chain). */
+export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement, onBuilt?: () => void): ArcLayer {
   let chains: readonly RhymeChain[] = [];
   let colors: readonly ChainColor[] = [];
   let timelines: gsap.core.Timeline[] = [];
   let observer: IntersectionObserver | null = null;
   let waiting = new Map<Element, Drawn>();
   let queued = false;
+  let lastWidth = -1; // arcs depend on line wrapping, so only a width change invalidates them
 
   function stop(): void {
     timelines.forEach((t) => t.kill());
@@ -193,8 +196,10 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement): ArcLayer
     svg.classList.remove('is-settled');
     if (chains.length === 0) return;
 
-    const anchors = measure(stage);
     const width = stage.clientWidth;
+    lastWidth = width;
+    if (width === 0) return; // not displayed (stacked layout before a result): nothing to measure
+    const anchors = measure(stage);
     const height = stage.clientHeight;
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     svg.setAttribute('width', String(width));
@@ -259,6 +264,7 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement): ArcLayer
 
     if (!animate || drawn.length === 0) {
       svg.classList.add('is-settled');
+      onBuilt?.();
       return;
     }
     // Hide everything now (inline, so GSAP's clearProps restores the natural state), reveal on intersection.
@@ -279,14 +285,18 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement): ArcLayer
       waiting.set(d.el, d);
       observer.observe(d.el);
     }
+    onBuilt?.();
   }
 
   /** Arcs rise from their baseline, line by line; markers pop in after them. Tokens drive every number. */
   function reveal(batch: readonly Drawn[]): void {
     const reduce = reducedMotion();
     const dur = seconds('--dur-reveal');
-    CustomEase.create('rs-drawer', bezier('--ease-drawer', '0.32,0.72,0,1'));
-    CustomEase.create('rs-slap', bezier('--ease-slap', '0.34,1.56,0.64,1'));
+    if (!easesReady) {
+      CustomEase.create('rs-drawer', bezier('--ease-drawer', '0.32,0.72,0,1'));
+      CustomEase.create('rs-slap', bezier('--ease-slap', '0.34,1.56,0.64,1'));
+      easesReady = true;
+    }
 
     const ranks = [...new Set(batch.map((d) => d.rank))].sort((x, y) => x - y);
     const step = reduce ? 0 : Math.min(0.07, 0.7 / ranks.length);
@@ -329,7 +339,10 @@ export function createArcLayer(stage: HTMLElement, svg: SVGSVGElement): ArcLayer
       build(false);
     });
   };
-  new ResizeObserver(requestRebuild).observe(stage);
+  // Height changes (a verse rendering, the rail appearing) must not rebuild: that would cancel a draw-in in progress.
+  new ResizeObserver(() => {
+    if (stage.clientWidth !== lastWidth) requestRebuild();
+  }).observe(stage);
   document.fonts.addEventListener('loadingdone', requestRebuild);
 
   return {

@@ -20,7 +20,9 @@ export interface TokenizeOptions {
   readonly keepWord?: (normalized: string) => boolean;
 }
 
-const WORD_RUN = /[\p{L}\p{N}'’‘ʼ`´-]+/gu;
+const WORD_RUN = /[\p{L}\p{N}'’‘ʼ`´-]+/gu; // matchAll clones it, so no shared lastIndex state
+const HAS_ALNUM = /[\p{L}\p{N}]/u;
+const EDGE_HYPHENS = /^-+|-+$/g;
 
 interface Piece {
   readonly text: string;
@@ -57,15 +59,15 @@ export function tokenizeVerse(text: string, options: TokenizeOptions = {}): Vers
 
   for (const rawLine of text.split(/\r\n|\r|\n/)) {
     const lineStart = offset;
-    offset += rawLine.length + (text.slice(offset + rawLine.length).startsWith('\r\n') ? 2 : 1);
+    offset += rawLine.length + (text.startsWith('\r\n', offset + rawLine.length) ? 2 : 1);
 
     const words: Word[] = [];
-    for (let m = WORD_RUN.exec(rawLine); m; m = WORD_RUN.exec(rawLine)) {
+    for (const m of rawLine.matchAll(WORD_RUN)) {
       for (const piece of splitRun(m[0], m.index, keepWord)) {
         const normalized = normalizeWord(piece.text);
-        if (!normalized || !/[\p{L}\p{N}]/u.test(normalized)) continue;
+        if (!normalized || !HAS_ALNUM.test(normalized)) continue;
         words.push({
-          raw: piece.text.replace(/^-+|-+$/g, ''),
+          raw: piece.text.replace(EDGE_HYPHENS, ''),
           text: normalized,
           span: { start: lineStart + piece.start, end: lineStart + piece.start + piece.text.length },
           index: words.length,

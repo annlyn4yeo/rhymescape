@@ -33,9 +33,9 @@ export type LineStyle = 'solid' | 'dashed' | 'dotted' | 'wavy' | 'double';
 const GOLDEN_ANGLE = 137.50776405;
 const START_HUE = 354;
 /** WCAG AA is 4.5; the margin absorbs 8-bit rounding in the rendered colour. */
-export const TARGET_CONTRAST = 4.7;
+const TARGET_CONTRAST = 4.7;
 
-export const MARKERS: readonly Marker[] = [
+const MARKERS: readonly Marker[] = [
   { name: 'circle', d: 'M-4.4 0a4.4 4.4 0 1 0 8.8 0a4.4 4.4 0 1 0 -8.8 0Z' },
   { name: 'square', d: 'M-3.8 -3.8H3.8V3.8H-3.8Z' },
   { name: 'triangle', d: 'M0 -5.2L5 3.8H-5Z' },
@@ -46,7 +46,7 @@ export const MARKERS: readonly Marker[] = [
   { name: 'spark', d: 'M0 -6L1.6 -1.6L6 0L1.6 1.6L0 6L-1.6 1.6L-6 0L-1.6 -1.6Z' },
 ];
 
-export const LINE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted', 'wavy', 'double'];
+const LINE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted', 'wavy', 'double'];
 
 /* ── OKLCH maths ─────────────────────────────────────────── */
 
@@ -73,11 +73,11 @@ const luminanceOfLinear = ([r, g, b]: Rgb): number => {
   return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
 };
 
-export const luminance = (c: Oklch): number => luminanceOfLinear(oklchToLinear(c));
+const luminance = (c: Oklch): number => luminanceOfLinear(oklchToLinear(c));
 
-export const ratioOfLuminance = (y1: number, y2: number): number => (Math.max(y1, y2) + 0.05) / (Math.min(y1, y2) + 0.05);
+const ratioOfLuminance = (y1: number, y2: number): number => (Math.max(y1, y2) + 0.05) / (Math.min(y1, y2) + 0.05);
 
-export const contrast = (a: Oklch, b: Oklch): number => ratioOfLuminance(luminance(a), luminance(b));
+const contrast = (a: Oklch, b: Oklch): number => ratioOfLuminance(luminance(a), luminance(b));
 
 /** A chain colour can land on any stock, so it has to pass on the hardest one. */
 const worstContrast = (c: Oklch, surfaces: readonly Oklch[]): number => Math.min(...surfaces.map((s) => contrast(c, s)));
@@ -94,9 +94,9 @@ function maxChroma(L: number, h: number): number {
   return lo;
 }
 
-export const formatOklch = (c: Oklch): string => `oklch(${c.L.toFixed(3)} ${c.C.toFixed(3)} ${c.h.toFixed(1)})`;
+const formatOklch = (c: Oklch): string => `oklch(${c.L.toFixed(3)} ${c.C.toFixed(3)} ${c.h.toFixed(1)})`;
 
-export function parseOklch(css: string): Oklch | null {
+function parseOklch(css: string): Oklch | null {
   const m = /oklch\(\s*([\d.]+%?)\s+([\d.]+)\s+([\d.]+)/i.exec(css);
   if (!m) return null;
   const L = m[1]!.endsWith('%') ? parseFloat(m[1]!) / 100 : parseFloat(m[1]!);
@@ -136,7 +136,7 @@ function solveWash(h: number, text: Oklch): Oklch {
   return c;
 }
 
-export function chainLabel(i: number): string {
+function chainLabel(i: number): string {
   let s = '';
   let n = i;
   do {
@@ -153,24 +153,33 @@ export interface Palette {
   readonly text: Oklch;
 }
 
+/** The colours for chain number i. */
+function solveChain(i: number, { surfaces, text }: Palette): ChainColor {
+  const hue = (START_HUE + i * GOLDEN_ANGLE) % 360;
+  const ink = solveInk(hue, i % 2 === 0 ? 0.2 : 0.17, surfaces, i % 2 === 0 ? 0 : 0.035);
+  const wash = solveWash(hue, text);
+  return {
+    index: i,
+    label: chainLabel(i),
+    hue,
+    ink,
+    wash,
+    inkCss: formatOklch(ink),
+    washCss: formatOklch(wash),
+    marker: MARKERS[i % MARKERS.length]!,
+    lineStyle: LINE_STYLES[i % LINE_STYLES.length]!,
+  };
+}
+
+/** Chain i never depends on how many chains there are, so solved colours are kept per palette and only extended. */
+let memo: { key: string; colors: ChainColor[] } = { key: '', colors: [] };
+
 /** `count` chain colours. There is no upper limit; markers and line styles cycle, letters never repeat. */
-export function generateChainColors(count: number, { surfaces, text }: Palette): ChainColor[] {
-  return Array.from({ length: count }, (_, i): ChainColor => {
-    const hue = (START_HUE + i * GOLDEN_ANGLE) % 360;
-    const ink = solveInk(hue, i % 2 === 0 ? 0.2 : 0.17, surfaces, i % 2 === 0 ? 0 : 0.035);
-    const wash = solveWash(hue, text);
-    return {
-      index: i,
-      label: chainLabel(i),
-      hue,
-      ink,
-      wash,
-      inkCss: formatOklch(ink),
-      washCss: formatOklch(wash),
-      marker: MARKERS[i % MARKERS.length]!,
-      lineStyle: LINE_STYLES[i % LINE_STYLES.length]!,
-    };
-  });
+export function generateChainColors(count: number, palette: Palette): ChainColor[] {
+  const key = JSON.stringify([palette.surfaces, palette.text]);
+  if (memo.key !== key) memo = { key, colors: [] };
+  for (let i = memo.colors.length; i < count; i++) memo.colors.push(solveChain(i, palette));
+  return memo.colors.slice(0, count);
 }
 
 /** Publishes --chain-{i}-ink / --chain-{i}-wash so CSS never holds a chain colour. */

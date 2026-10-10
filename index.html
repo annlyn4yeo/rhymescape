@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Rhymescape</title>
-  <meta name="description" content="Paste a verse and see every rhyme chain light up, with syllable counts and a contrast-checked palette.">
+  <meta name="description" content="Drop your bars and see your rhyme scheme light up, chain by chain. No bars handy? Paste a verse you know.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='oklch(0.21 0.035 262)'/%3E%3Cpath d='M5 24C5 8 15 8 15 24' fill='none' stroke='oklch(0.7 0.21 354)' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M13 24C13 3 28 3 28 24' fill='none' stroke='oklch(0.93 0.17 102)' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
   <script>document.documentElement.classList.add('js')</script>
 </head>
@@ -23,7 +23,7 @@
       <section class="left">
         <div class="intro" data-reveal>
           <h1>Write bars.<br><span>Watch every rhyme light up.</span></h1>
-          <p class="lede">Paste a verse. Every rhyme chain gets its own ink, marker and line style, contrast-checked before you see it.</p>
+          <p class="lede">See your rhyme scheme, chain by chain.</p>
         </div>
 
         <section class="plate plate-pink write" data-reveal aria-label="Write">
@@ -32,9 +32,8 @@
               <label class="label" for="verse-input">Write</label>
               <span class="meta" id="input-meta">0 lines</span>
             </div>
-            <textarea id="verse-input" class="field" spellcheck="false" autocomplete="off" placeholder="Drop your bars here. One line per bar, a blank line between stanzas."></textarea>
+            <textarea id="verse-input" class="field" spellcheck="false" autocomplete="off" placeholder="Drop your bars here. No bars? Paste a verse you know."></textarea>
             <div class="actions">
-              <button type="button" class="btn btn-ghost" id="sample-btn"><span>Load sample</span></button>
               <span class="hint"><kbd>Ctrl</kbd> <kbd>Enter</kbd></span>
               <button type="button" class="btn btn-primary" id="analyze-btn" disabled>
                 <span id="analyze-label">Loading dictionary</span>
@@ -60,25 +59,15 @@
             <div class="read-stage" id="read-stage">
               <div id="read-view" class="read-view" aria-live="polite">
                 <div class="empty">
-                  <p>Your verse appears here, every rhyme chain in its own ink.</p>
-                  <p class="empty-sub">Load the sample to see perfect, multisyllabic, internal and slant rhymes at once.</p>
+                  <p>Your rhyme scheme shows up here.</p>
+                  <p class="empty-sub">Drop your bars, or paste a verse you know.</p>
                 </div>
               </div>
               <svg class="arcs" id="arcs" aria-hidden="true" focusable="false"></svg>
             </div>
           </div>
 
-          <div class="read-foot" id="read-foot" hidden>
-            <button type="button" class="verdict" id="contrast-btn" aria-expanded="false" aria-controls="contrast-sheet">
-              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg>
-              <span id="contrast-verdict">Contrast</span>
-            </button>
-            <span class="foot-note">Hover a word or a chain to isolate it. Click a chain to pin it.</span>
-          </div>
-
-          <div class="sheet" id="contrast-sheet" role="region" aria-label="Contrast check">
-            <div id="contrast-view"></div>
-          </div>
+          <p class="foot-note" id="read-foot" hidden>Hover a word or a chain to isolate it. Click a chain to pin it.</p>
         </div>
       </section>
     </main>

@@ -46,18 +46,22 @@ function paintOrder(chains: readonly RhymeChain[]): number[] {
   return chains.map((_, i) => i).sort((a, b) => chains[b]!.syllables - chains[a]!.syllables || a - b);
 }
 
-function renderLine(line: AnalyzedLine, order: readonly number[], chains: readonly RhymeChain[], colors: readonly ChainColor[], index: number): HTMLElement {
+/** A member, tied to the chain that owns it. */
+interface Placed {
+  readonly chain: number;
+  readonly member: number;
+  readonly range: RhymeMember;
+}
+
+function renderLine(line: AnalyzedLine, placed: readonly Placed[], chains: readonly RhymeChain[], colors: readonly ChainColor[], index: number): HTMLElement {
   const text = line.raw;
   const owner: (Cell | null)[] = Array.from({ length: text.length }, () => null);
   const ends = new Map<string, number>(); // member key -> index of its last painted character
 
-  for (const ci of order) {
-    chains[ci]!.members.forEach((m, mi) => {
-      if (m.line !== line.index) return;
-      const [from, to] = memberRange(line, m);
-      for (let k = from; k < to; k++) if (!owner[k]) owner[k] = { chain: ci, member: mi };
-      if (owner[to - 1]?.chain === ci) ends.set(`${ci}:${mi}`, to - 1);
-    });
+  for (const { chain: ci, member: mi, range } of placed) {
+    const [from, to] = memberRange(line, range);
+    for (let k = from; k < to; k++) if (!owner[k]) owner[k] = { chain: ci, member: mi };
+    if (owner[to - 1]?.chain === ci) ends.set(`${ci}:${mi}`, to - 1);
   }
 
   const p = el('p', 'line');
@@ -99,19 +103,30 @@ function renderLine(line: AnalyzedLine, order: readonly number[], chains: readon
 }
 
 export function renderReadView(container: HTMLElement, verse: AnalyzedVerse, chains: readonly RhymeChain[], colors: readonly ChainColor[]): void {
-  container.textContent = '';
-  const order = paintOrder(chains);
+  // Members by line, in paint order (longer matches first), so each line only looks at its own.
+  const byLine = new Map<number, Placed[]>();
+  for (const ci of paintOrder(chains)) {
+    chains[ci]!.members.forEach((range, member) => {
+      const list = byLine.get(range.line);
+      if (list) list.push({ chain: ci, member, range });
+      else byLine.set(range.line, [{ chain: ci, member, range }]);
+    });
+  }
+
+  // Built off-screen and swapped in once.
+  const next = document.createDocumentFragment();
   let stanza = -1;
   let group: HTMLElement | null = null;
   verse.lines.forEach((line, i) => {
     if (line.stanza !== stanza || !group) {
       stanza = line.stanza;
       group = el('div', 'stanza');
-      container.append(group);
+      next.append(group);
     }
-    group.append(renderLine(line, order, chains, colors, i));
+    group.append(renderLine(line, byLine.get(line.index) ?? [], chains, colors, i));
   });
-  if (verse.lines.length === 0) container.append(el('p', 'empty-note', 'No words found. Type a few lines first.'));
+  if (verse.lines.length === 0) next.append(el('p', 'empty-note', 'No words found. Type a few lines first.'));
+  container.replaceChildren(next);
 }
 
 /** Focus one chain: every other highlight, tag, arc and rail chip dims. Pass null to clear. */

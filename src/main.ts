@@ -5,10 +5,8 @@ import './styles/app.css';
 import { detectRhymes, loadEngine, type AnalyzedVerse, type Engine, type RhymeChain } from './engine';
 import { createArcLayer } from './ui/arcs';
 import { generateChainColors, publishChainVars, readPalette, type ChainColor } from './ui/colors';
-import { checkContrast } from './ui/contrast';
-import { markActiveChip, renderContrast, renderRail, renderVerdict } from './ui/panels';
+import { markActiveChip, renderRail } from './ui/panels';
 import { renderReadView, soloChain } from './ui/readView';
-import { SAMPLE_VERSE } from './ui/sample';
 
 const $ = <T extends HTMLElement>(selector: string): T => {
   const node = document.querySelector<T>(selector);
@@ -27,9 +25,8 @@ const readStage = $('#read-stage');
 const rail = $('#chain-rail');
 const railWrap = $('#rail-wrap');
 const readFoot = $('#read-foot');
-const contrastBtn = $<HTMLButtonElement>('#contrast-btn');
-const contrastSheet = $('#contrast-sheet');
-const arcs = createArcLayer(readStage, document.querySelector<SVGSVGElement>('#arcs')!);
+// A rebuilt overlay (resize, fonts) has fresh elements: reapply whichever chain is isolated.
+const arcs = createArcLayer(readStage, document.querySelector<SVGSVGElement>('#arcs')!, () => soloChain(readStage, hovered ?? pinned));
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -57,23 +54,6 @@ function applyFocus(): void {
 /** Arcs measure real glyph positions, so they wait for the fonts the read view uses. */
 const fontsReady = (): Promise<unknown> => Promise.all([document.fonts.load('450 16px "Martian Mono"'), document.fonts.load('650 16px "Martian Mono"'), document.fonts.ready]);
 
-/* ── Contrast sheet ──────────────────────────────────────── */
-
-function setSheet(open: boolean): void {
-  contrastSheet.toggleAttribute('data-open', open);
-  contrastBtn.setAttribute('aria-expanded', String(open));
-}
-contrastBtn.addEventListener('click', () => setSheet(!contrastSheet.hasAttribute('data-open')));
-document.addEventListener('pointerdown', (e) => {
-  if (contrastSheet.hasAttribute('data-open') && !contrastSheet.contains(e.target as Node) && !contrastBtn.contains(e.target as Node)) setSheet(false);
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && contrastSheet.hasAttribute('data-open')) {
-    setSheet(false);
-    contrastBtn.focus();
-  }
-});
-
 /* ── Rendering ───────────────────────────────────────────── */
 
 /** Chain colours are solved against the live stock tokens, so they are regenerated for every analysis. */
@@ -82,7 +62,6 @@ async function paint(): Promise<void> {
   const run = ++runId;
   pinned = null;
   hovered = null;
-  setSheet(false);
   const { verse, chains } = result;
   const palette = readPalette(root);
   const colors: ChainColor[] = generateChainColors(chains.length, palette);
@@ -95,6 +74,9 @@ async function paint(): Promise<void> {
   const parts = [plural(verse.lines.length, 'line'), plural(words, 'word'), chains.length ? plural(chains.length, 'chain') : 'no rhymes'];
   if (verse.approximateWords.length) parts.push(`${verse.approximateWords.length} approx`);
   $('#read-meta').textContent = parts.join(' · ');
+
+  // On small screens the result sits below the input: bring it into view, rhymes or not.
+  if (stacked.matches) readPlate.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
 
   const hasChains = chains.length > 0;
   railWrap.hidden = !hasChains;
@@ -121,13 +103,6 @@ async function paint(): Promise<void> {
     },
   });
 
-  const report = checkContrast(root, colors, palette);
-  renderVerdict(contrastBtn, $('#contrast-verdict'), report);
-  renderContrast($('#contrast-view'), report);
-
-  // On small screens the result sits below the input: bring it into view once it exists.
-  if (stacked.matches) readPlate.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
-
   await fontsReady();
   if (run === runId) arcs.show(chains, colors, true);
 }
@@ -140,7 +115,7 @@ function analyze(): void {
   }
   const verse = engine.analyze(input.value);
   result = { verse, chains: detectRhymes(verse) };
-  void paint();
+  paint().catch((error: unknown) => console.error('Could not render the verse', error));
 }
 
 /* ── Hover a word, tag or arc to isolate its chain (fine pointers only) ── */
@@ -162,7 +137,10 @@ readStage.addEventListener('pointerleave', () => {
 rail.addEventListener(
   'wheel',
   (e) => {
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || rail.scrollWidth <= rail.clientWidth) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const max = rail.scrollWidth - rail.clientWidth;
+    const canMove = e.deltaY > 0 ? rail.scrollLeft < max : rail.scrollLeft > 0;
+    if (!canMove) return; // let the page have it
     e.preventDefault();
     rail.scrollLeft += e.deltaY;
   },
@@ -184,11 +162,6 @@ input.addEventListener('keydown', (e) => {
   }
 });
 analyzeBtn.addEventListener('click', analyze);
-$('#sample-btn').addEventListener('click', () => {
-  input.value = SAMPLE_VERSE;
-  updateInputMeta();
-  analyze();
-});
 
 /* ── Reveal on load ──────────────────────────────────────── */
 

@@ -1,6 +1,5 @@
 import type { RhymeChain } from '../engine';
 import type { ChainColor } from './colors';
-import { AA, type ContrastReport } from './contrast';
 import { describeChain } from './readView';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -13,7 +12,6 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
 };
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
-const ratioText = (r: number): string => `${r.toFixed(1)}:1`;
 
 function markerIcon(color: ChainColor): SVGSVGElement {
   const svg = document.createElementNS(NS, 'svg');
@@ -80,53 +78,12 @@ export function markActiveChip(rail: HTMLElement, id: string | null, smooth: boo
   rail.querySelectorAll<HTMLElement>('.rail-chip').forEach((chip) => {
     const active = id !== null && chip.dataset.chain === id;
     chip.toggleAttribute('data-active', active);
-    if (active) chip.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: smooth ? 'smooth' : 'auto' });
+    if (!active) return;
+    // Scroll the rail itself, clear of its faded edges. scrollIntoView would also move the page.
+    const edge = 24;
+    const r = rail.getBoundingClientRect();
+    const c = chip.getBoundingClientRect();
+    const by = c.left < r.left + edge ? c.left - r.left - edge : c.right > r.right - edge ? c.right - r.right + edge : 0;
+    if (by) rail.scrollBy({ left: by, behavior: smooth ? 'smooth' : 'auto' });
   });
-}
-
-/** The pill in the footer: a one-glance verdict. Details live in the sheet it opens. */
-export function renderVerdict(button: HTMLElement, label: HTMLElement, report: ContrastReport): void {
-  const ok = report.passing === report.rows.length && report.range.passing === report.range.count;
-  button.classList.toggle('bad', !ok);
-  label.textContent = ok
-    ? `AA ${report.passing}/${report.rows.length} · lowest ${ratioText(report.minimum)}`
-    : `${report.rows.length - report.passing} below AA · lowest ${ratioText(report.minimum)}`;
-}
-
-/** Summary banner plus one row per chain: ink on stock, body ink on wash, tag text on ink. */
-export function renderContrast(container: HTMLElement, report: ContrastReport): void {
-  container.textContent = '';
-  const okAll = report.passing === report.rows.length;
-  const okRange = report.range.passing === report.range.count;
-
-  const summary = el('p', `summary ${okAll && okRange ? '' : 'bad'}`);
-  summary.append(
-    el('b', undefined, okAll ? 'All pass' : `${report.rows.length - report.passing} fail`),
-    document.createTextNode(` · ${report.passing}/${report.rows.length} chains clear WCAG AA (${AA}:1) on every stock · lowest ${ratioText(report.minimum)}`),
-  );
-  container.append(summary);
-
-  const table = el('table', 'contrast');
-  const head = el('thead');
-  head.innerHTML = '<tr><th scope="col">Chain</th><th scope="col">Ink on stock</th><th scope="col">Text on wash</th><th scope="col">Tag on ink</th><th scope="col">Result</th></tr>';
-  const body = el('tbody');
-  report.rows.forEach((row, i) => {
-    const tr = el('tr');
-    const cell = (value: number): HTMLTableCellElement => el('td', value >= AA ? '' : 'low', ratioText(value));
-    const th = el('th');
-    th.scope = 'row';
-    const tag = el('span', 'tag mini', row.label);
-    tag.style.setProperty('--chain-ink', `var(--chain-${i}-ink)`);
-    th.append(tag);
-    const result = el('td');
-    result.append(el('span', `badge${row.pass ? '' : ' fail'}`, row.pass ? 'AA' : 'FAIL'));
-    tr.append(th, cell(row.ink), cell(row.wash), cell(row.tag), result);
-    body.append(tr);
-  });
-  table.append(head, body);
-  container.append(table);
-
-  const note = el('p', `range ${okRange ? '' : 'bad'}`);
-  note.textContent = `Generator check: ${report.range.passing}/${report.range.count} of 60 generated chains pass, lowest ${ratioText(report.range.minimum)}. Measured from the colours as the browser renders them.`;
-  container.append(note);
 }
